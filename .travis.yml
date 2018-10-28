@@ -5,17 +5,14 @@ services:
 env:
   global:
     # Docker
-    - DOCKER_REPOSITORY=example/foo
-    - DOCKER_EMAIL="foo@example.com"
-    - DOCKER_USERNAME="example"
-
+    - DOCKER_REPOSITORY=dask-lightgbm
 
 before_install:
   - docker --version
-  - echo "ENV GIT_SHA ${TRAVIS_COMMIT}" >> Dockerfile
+  - echo "ENV GIT_SHA ${TRAVIS_COMMIT}" >> Dockerfile.test
 
 install:
-  - docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} --pull=true .
+  - docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} -f Dockerfile.test --pull=true .
 
 script:
   - docker run ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} pytest /app/dask_lightgbm

@@ -1,0 +1,36 @@
+FROM python:3.6-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        cmake \
+        libc6-dev \
+        make \
+        gcc \
+        g++ \
+        libssl-dev \
+        automake \
+        libtool \
+        net-tools \
+        git \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+ADD . /app
+ENV PYTHONPATH=/app:/usr/lib/python3.6/site-packages/
+
+# need to be installed from github until lightgbm 2.2.2 will be released
+RUN git clone https://github.com/Microsoft/LightGBM.git LightGBM && \
+    cd ./LightGBM/python-package && \
+    python setup.py sdist && \
+    python -m pip install ./dist/* && \
+    rm -rf /app/LightGBM
+
+WORKDIR /app
+
+RUN python -m pip install ".[dev]"
+RUN python -m pip install ".[sparse]"
+
+
+
+ENTRYPOINT [ "/bin/bash", "-c", "pytest ${*}", "--" ]
