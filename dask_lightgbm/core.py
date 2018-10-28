@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from lightgbm.basic import _safe_call, _LIB
 from toolz import first, assoc
+import dask.dataframe as dd
+import dask.array as da
 
 try:
     import sparse
@@ -49,8 +51,7 @@ def concat(L):
     elif sparse and isinstance(L[0], sparse.SparseArray):
         return sparse.concatenate(L, axis=0)
     else:
-        raise TypeError("Data must be either numpy arrays or pandas dataframes"
-                        ". Got %s" % type(L[0]))
+        raise TypeError("Data must be either numpy arrays or pandas dataframes. Got %s" % type(L[0]))
 
 
 def _fit_local(params, model_factory, list_of_parts, worker_addresses, local_listen_port=12400, listen_time_out=120,
@@ -59,19 +60,26 @@ def _fit_local(params, model_factory, list_of_parts, worker_addresses, local_lis
                                           listen_time_out)
     params = {**params, **network_params}
 
-    data, labels = zip(*list_of_parts)  # Prepare data
+    # Prepare data
+    if len(list_of_parts[0]) == 3:
+        data, labels, weight = zip(*list_of_parts)
+        weight = concat(weight)
+    else:
+        data, labels = zip(*list_of_parts)
+        weight = None
+
     data = concat(data)  # Concatenate many parts into one
     labels = concat(labels)
 
     try:
         classifier = model_factory(**params)
-        classifier.fit(data, labels)
+        classifier.fit(data, labels, sample_weight=weight)
     finally:
         _safe_call(_LIB.LGBM_NetworkFree())
     return classifier
 
 
-def train(client, X, y, params, model_factory, **kwargs):
+def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
     data_parts = X.to_delayed()
     label_parts = y.to_delayed()
     if isinstance(data_parts, np.ndarray):
@@ -80,8 +88,17 @@ def train(client, X, y, params, model_factory, **kwargs):
     if isinstance(label_parts, np.ndarray):
         assert label_parts.ndim == 1 or label_parts.shape[1] == 1
         label_parts = label_parts.flatten().tolist()
-    # Arrange parts into pairs.  This enforces co-locality
-    parts = list(map(delayed, zip(data_parts, label_parts)))
+
+    # Arrange parts into tuples.  This enforces co-locality
+    if sample_weight is not None:
+        sample_weight_parts = sample_weight.to_delayed()
+        if isinstance(sample_weight_parts, np.ndarray):
+            assert sample_weight_parts.ndim == 1 or sample_weight_parts.shape[1] == 1
+            sample_weight_parts = sample_weight_parts.flatten().tolist()
+        parts = list(map(delayed, zip(data_parts, label_parts, sample_weight_parts)))
+    else:
+        parts = list(map(delayed, zip(data_parts, label_parts)))
+
     parts = client.compute(parts)  # Start computation in the background
     wait(parts)
     # for part in parts:
@@ -110,51 +127,53 @@ def train(client, X, y, params, model_factory, **kwargs):
     return results[0]
 
 
-class LGBMRegressor(lightgbm.LGBMRegressor):
+def _predict_part(part, model, proba, **kwargs):
 
-    def fit(self, X, y=None, **kwargs):
-        client = default_client()
-        model_factory = lightgbm.LGBMRegressor
-        params = self.get_params(True)
+    if isinstance(part, pd.DataFrame):
+        X = part.values
+    else:
+        X = part
+    if proba:
+        result = model.predict_proba(X, **kwargs)
+    else:
+        result = model.predict(X, **kwargs)
 
-        model = train(client, X, y, params, model_factory, **kwargs)
-        self.set_params(**model.get_params())
-        self._Booster = model._Booster
-        self._le = model._le
-        self._classes = model._classes
-        self._n_classes = model._n_classes
-        self._n_features = model._n_features
-        self._evals_result = model._evals_result
-        self._best_iteration = model._best_iteration
-        self._best_score = model._best_score
+    if isinstance(part, pd.DataFrame):
+        if proba:
+            result = pd.DataFrame(result, index=part.index)
+        else:
+            result = pd.Series(result, index=part.index, name='predictions')
+    return result
 
-        return self
+
+def predict(client, model, data, proba=False, dtype=np.float32, **kwargs):
+
+    if isinstance(data, dd._Frame):
+        result = data.map_partitions(_predict_part, model=model, proba=proba, **kwargs)
+        result = result.values
+    elif isinstance(data, da.Array):
+        if proba:
+            kwargs = dict(
+                drop_axis=None,
+                chunks=(data.chunks[0], (model.n_classes_,)),
+            )
+        else:
+            kwargs = dict(drop_axis=1)
+
+        result = data.map_blocks(_predict_part, model=model, proba=proba, dtype=dtype, **kwargs)
+
+    return result
 
 
 class LGBMClassifier(lightgbm.LGBMClassifier):
 
-    def fit(self, X, y=None, **kwargs):
-        """Fit a gradient boosting classifier
-
-        Parameters
-        ----------
-        X : array-like [n_samples, n_features]
-            Feature Matrix. May be a dask.array or dask.dataframe
-        y : array-like
-            Labels
-        classes : sequence, optional
-            The unique values in `y`. If no specified, this will be
-            eagerly computed from `y` before training.
-
-        Returns
-        -------
-        self : LGBMClassifier
-        """
-        client = default_client()
+    def fit(self, X, y=None, sample_weight=None, client=None, **kwargs):
+        if client is None:
+            client = default_client()
         model_factory = lightgbm.LGBMClassifier
         params = self.get_params(True)
 
-        model = train(client, X, y, params, model_factory, **kwargs)
+        model = train(client, X, y, params, model_factory, sample_weight, **kwargs)
         self.set_params(**model.get_params())
         self._Booster = model._Booster
         self._le = model._le
@@ -166,3 +185,34 @@ class LGBMClassifier(lightgbm.LGBMClassifier):
         self._best_score = model._best_score
 
         return self
+    fit.__doc__ = lightgbm.LGBMClassifier.fit.__doc__
+
+    def _network_params(self):
+        return {
+            "machines": self.machines
+        }
+
+    def predict(self, X, client=None, **kwargs):
+        if client is None:
+            client = default_client()
+        return predict(client, self.to_local(), X, dtype=self.classes_[0].dtype, **kwargs)
+    predict.__doc__ = lightgbm.LGBMClassifier.predict.__doc__
+
+    def predict_proba(self, X, client=None, **kwargs):
+        if client is None:
+            client = default_client()
+        return predict(client, self.to_local(), X, proba=True, dtype=self.classes_[0].dtype, **kwargs)
+    predict_proba.__doc__ = lightgbm.LGBMClassifier.predict_proba.__doc__
+
+    def to_local(self):
+        model = lightgbm.LGBMClassifier(**self.get_params())
+        model._Booster = self._Booster
+        model._le = self._le
+        model._classes = self._classes
+        model._n_classes = self._n_classes
+        model._n_features = self._n_features
+        model._evals_result = self._evals_result
+        model._best_iteration = self._best_iteration
+        model._best_score = self._best_score
+
+        return model

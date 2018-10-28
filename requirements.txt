@@ -1,3 +1,0 @@
-lightgbm>2.2.2
-dask
-distributed >= 1.15.2

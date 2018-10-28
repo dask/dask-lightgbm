@@ -1,0 +1,7 @@
+recursive-include dask_lightgbm *.py
+
+include setup.py
+include setup.cfg
+include README.rst
+include LICENSE.txt
+include MANIFEST.in

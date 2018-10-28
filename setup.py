@@ -3,22 +3,27 @@
 import os
 from setuptools import setup
 
-requires = open('requirements.txt').read().strip().split('\n')
-install_requires = []
-extras_require = {'sparse': ['sparse', 'scipy']}
-for r in requires:
-    if ';' in r:
-        # requirements.txt conditional dependencies need to be reformatted for
-        # wheels to the form: `'[extra_name]:condition' : ['requirements']`
-        req, cond = r.split(';', 1)
-        cond = ':' + cond
-        cond_reqs = extras_require.setdefault(cond, [])
-        cond_reqs.append(req)
-    else:
-        install_requires.append(r)
+install_requires = [
+    'numpy>=0.14.0',
+    'lightgbm>=2.2.2',
+    'dask>=0.16.0',
+    'distributed >= 1.15.2',
+    'sparse>=0.5.0'
+]
+
+extras_require = {
+    "dev": [
+        "pytest>=3.9.0",
+        "pandas>=0.23.0"
+    ],
+    "sparse": [
+        "sparse>=0.5.0",
+        "scipy>=1.0.0"
+    ]
+}
 
 setup(name='dask-lightgbm',
-      version='0.1.5',
+      version='0.1.0',
       description='Interactions between Dask and LightGBM',
       license='BSD',
       install_requires=install_requires,
