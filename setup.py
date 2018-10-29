@@ -7,8 +7,7 @@ install_requires = [
     'numpy>=0.14.0',
     'lightgbm>=2.2.2',
     'dask>=0.16.0',
-    'distributed >= 1.15.2',
-    'sparse>=0.5.0'
+    'distributed >= 1.15.2'
 ]
 
 extras_require = {
