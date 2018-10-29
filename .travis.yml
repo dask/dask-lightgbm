@@ -18,4 +18,5 @@ install:
 script:
   - docker run ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} pytest /app/dask_lightgbm
   - docker-compose up -d
+  - sleep 5
   - docker run -it --link dask-lightgbm_scheduler_1:scheduler --network dask-lightgbm_default dask-lightgbm pytest /app/system_tests -ss
