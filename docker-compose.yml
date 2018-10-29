@@ -18,7 +18,12 @@ services:
       dockerfile: Dockerfile.test
     image: dask-lightgbm
     hostname: dask-worker
-    ports:
-      - "12400:12400"
-      - "12401:12401"
     command: ["dask-worker", "--nprocs", "2", "--nthreads", "2", "scheduler:8786"]
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: dask-lightgbm
+    hostname: dask-client
+    command: ["pytest", "/app/system_tests"]
