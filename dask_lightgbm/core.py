@@ -54,7 +54,7 @@ def concat(L):
         raise TypeError("Data must be either numpy arrays or pandas dataframes. Got %s" % type(L[0]))
 
 
-def _fit_local(params, model_factory, list_of_parts, worker_addresses, local_listen_port=12400, listen_time_out=120,
+def _fit_local(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400, listen_time_out=120,
                **kwargs):
     network_params = build_network_params(worker_addresses, get_worker().address, local_listen_port,
                                           listen_time_out)
@@ -76,7 +76,12 @@ def _fit_local(params, model_factory, list_of_parts, worker_addresses, local_lis
         classifier.fit(data, labels, sample_weight=weight)
     finally:
         _safe_call(_LIB.LGBM_NetworkFree())
-    return classifier
+
+    if return_model:
+        return classifier
+    else:
+        return None
+
 
 
 def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
@@ -109,6 +114,7 @@ def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
     worker_map = defaultdict(list)
     for key, workers in who_has.items():
         worker_map[first(workers)].append(key_to_part_dict[key])
+    master_worker = first(worker_map)
     ncores = client.ncores()  # Number of cores per worker
     if "tree_learner" not in params or params['tree_learner'].lower() not in {"data", "feature","voting"}:
         logger.warning("Parameter tree_learner not set or set to incorrect value (%s), using 'data' as default", params.get("tree_learner", None))
@@ -121,6 +127,7 @@ def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
                                          worker_addresses=list(worker_map.keys()),
                                          local_listen_port=params.get("local_listen_port", 12400),
                                          listen_time_out=params.get("listen_time_out", 120),
+                                         return_model=worker==master_worker,
                                          **kwargs)
                            for worker, list_of_parts in worker_map.items()]
 
