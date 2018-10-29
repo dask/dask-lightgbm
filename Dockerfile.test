@@ -30,7 +30,3 @@ WORKDIR /app
 
 RUN python -m pip install ".[dev]"
 RUN python -m pip install ".[sparse]"
-
-
-
-ENTRYPOINT [ "/bin/bash", "-c", "pytest ${*}", "--" ]
