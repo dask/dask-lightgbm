@@ -25,7 +25,7 @@ distributed.comm.utils._offload_executor = ThreadPoolExecutor(max_workers=2)
 
 def _create_data(n_samples=100, centers=2, output="array", chunk_size=50):
     X, y = make_blobs(n_samples=n_samples, centers=centers)
-    w = np.ones(shape=X.shape[0])
+    w = np.random.rand(shape=X.shape[0])*0.01
 
     if output == "array":
         dX = da.from_array(X, (chunk_size, X.shape[1]))
