@@ -30,3 +30,4 @@ WORKDIR /app
 
 RUN python -m pip install ".[dev]"
 RUN python -m pip install ".[sparse]"
+RUN python -m pip install bokeh

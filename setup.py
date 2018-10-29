@@ -14,7 +14,9 @@ install_requires = [
 extras_require = {
     "dev": [
         "pytest>=3.9.0",
-        "pandas>=0.23.0"
+        "pandas>=0.23.0",
+        'dask[dataframe]',
+        'requests'
     ],
     "sparse": [
         "sparse>=0.5.0",
