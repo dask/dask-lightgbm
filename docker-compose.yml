@@ -1,0 +1,24 @@
+version: '3.1'
+
+services:
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: dask-lightgbm
+    hostname: dask-scheduler
+    ports:
+      - "8786:8786"
+      - "8787:8787"
+    command: ["dask-scheduler"]
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: dask-lightgbm
+    hostname: dask-worker
+    ports:
+      - "12400:12400"
+      - "12401:12401"
+    command: ["dask-worker", "--nprocs", "2", "--nthreads", "2", "scheduler:8786"]

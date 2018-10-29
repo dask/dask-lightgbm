@@ -7,12 +7,14 @@ env:
     # Docker
     - DOCKER_REPOSITORY=dask-lightgbm
 
-before_install:
-  - docker --version
-  - echo "ENV GIT_SHA ${TRAVIS_COMMIT}" >> Dockerfile.test
-
-install:
-  - docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} -f Dockerfile.test --pull=true .
-
-script:
-  - docker run ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} pytest /app/dask_lightgbm
+jobs:
+  include:
+    - stage: "Prepare env"
+      script: docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} -f Dockerfile.test --pull=true .
+    - stage: "Unit tests"
+      script: docker run ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} pytest /app/dask_lightgbm
+    - stage: "System tests"
+      script:
+        - |
+          docker-compose up
+          docker run -it --link dask-lightgbm_scheduler_1:scheduler --network dask-lightgbm_default dask-lightgbm pytest /app/system_tests -ss
