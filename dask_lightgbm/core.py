@@ -101,16 +101,18 @@ def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
 
     parts = client.compute(parts)  # Start computation in the background
     wait(parts)
-    # for part in parts:
-    #     if part.status == 'error':
-    #         part  # trigger error locally
+    for part in parts:
+        if part.status == 'error':
+            part  # trigger error locally
     key_to_part_dict = dict([(part.key, part) for part in parts])
     who_has = client.who_has(parts)
     worker_map = defaultdict(list)
     for key, workers in who_has.items():
         worker_map[first(workers)].append(key_to_part_dict[key])
     ncores = client.ncores()  # Number of cores per worker
-    params['tree_learner'] = "data"
+    if "tree_learner" not in params or params['tree_learner'].lower() not in {"data", "feature","voting"}:
+        logger.warning("Parameter tree_learner not set or set to incorrect value (%s), using 'data' as default", params.get("tree_learner", None))
+        params['tree_learner'] = "data"
     # Tell each worker to init the booster on the chunks/parts that it has locally
     futures_classifiers = [client.submit(_fit_local,
                                          model_factory=model_factory,

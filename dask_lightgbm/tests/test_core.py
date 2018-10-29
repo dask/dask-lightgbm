@@ -140,3 +140,14 @@ def test_build_network_params():
         "listen_time_out": 120
     }
     assert exp_params == params
+
+
+@gen_cluster(client=True, timeout=None, check_new_threads=False)
+def test_errors(c, s, a, b):
+    def f(part):
+        raise Exception('foo')
+    df = dd.demo.make_timeseries()
+    df = df.map_partitions(f, meta=df._meta)
+    with pytest.raises(Exception) as info:
+        yield dlgbm.train(c, df, df.x, params={}, model_factory=lightgbm.LGBMClassifier)
+        assert 'foo' in str(info.value)
