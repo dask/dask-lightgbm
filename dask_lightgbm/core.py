@@ -11,9 +11,11 @@ import dask.array as da
 
 try:
     import sparse
-    import scipy.sparse as ss
 except ImportError:
     sparse = False
+try:
+    import scipy.sparse as ss
+except ImportError:
     ss = False
 
 from dask import delayed

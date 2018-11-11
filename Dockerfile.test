@@ -16,16 +16,7 @@ RUN apt-get update && \
 ADD . /app
 ENV PYTHONPATH=/app:/usr/lib/python3.6/site-packages/
 
-# need to be installed from github until lightgbm 2.2.2 will be released
-ADD https://github.com/Microsoft/LightGBM/archive/master.tar.gz LightGBM
-RUN tar xvf LightGBM && \
-    cd ./LightGBM-master/python-package && \
-    python setup.py sdist && \
-    python -m pip install ./dist/* && \
-    rm -rf /LightGBM /LightGBM-master
-
 WORKDIR /app
 
 RUN python -m pip install ".[dev]"
 RUN python -m pip install ".[sparse]"
-RUN python -m pip install bokeh
