@@ -30,6 +30,7 @@ setup(name='dask-lightgbm',
       long_description=(io.open('README.md', encoding='utf-8').read()
                         if os.path.exists('README.md')
                         else ''),
+      long_description_content_type='text/markdown',
       license='BSD',
       url='https://github.com/dask/dask-lightgbm',
       install_requires=install_requires,
