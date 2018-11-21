@@ -1,7 +1,7 @@
 Dask-LightGBM
 =============
 
-[![Build Status](https://travis-ci.org/SfinxCZ/dask-lightgbm.svg?branch=master)](https://travis-ci.org/SfinxCZ/dask-lightgbm)
+[![Build Status](https://travis-ci.org/dask/dask-lightgbm.svg?branch=master)](https://travis-ci.org/dask/dask-lightgbm)
 
 Distributed training with LightGBM and Dask.distributed
 
