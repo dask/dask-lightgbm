@@ -13,7 +13,7 @@ import scipy.sparse
 import sparse
 from dask.array.utils import assert_eq
 from dask.distributed import Client
-from distributed.utils_test import gen_cluster, cluster  # noqa
+from distributed.utils_test import gen_cluster, loop, cluster  # noqa
 from sklearn.datasets import make_blobs, make_regression
 from sklearn.metrics import confusion_matrix
 
