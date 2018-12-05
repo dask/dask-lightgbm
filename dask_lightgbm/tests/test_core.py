@@ -83,6 +83,8 @@ def test_classifier(loop, output, listen_port, centers):
             print(confusion_matrix(y, p2))
 
             assert_eq(s1, s2)
+            print(s1)
+
             assert_eq(p1, p2)
             assert_eq(y, p1)
             assert_eq(y, p2)
@@ -137,7 +139,7 @@ def test_classifier_local_predict(loop): #noqa
     ('array', 31400),
     ('scipy_csr_matrix', 32400),
     ('sparse', 33400),
-    # ('dataframe', 34400),  # Dataframes are not supported by dask_ml.metrics
+    ('dataframe', 34400),
 ])
 def test_regressor(loop, output, listen_port):
     with cluster() as (s, [a, b]):
@@ -156,6 +158,7 @@ def test_regressor(loop, output, listen_port):
 
             # Scores should be the same
             assert_eq(s1, s2, atol=.01)
+            print(s1)
 
             # Predictions should be roughly the same
             assert_eq(y, p1, rtol=1., atol=50.)
@@ -172,9 +175,9 @@ def test_regressor(loop, output, listen_port):
     ('sparse', 47400, .1),
     ('sparse', 48400, .5),
     ('sparse', 49400, .9),
-    # ('dataframe', 50400, .1),
-    # ('dataframe', 51400, .5),
-    # ('dataframe', 52400, .9),
+    ('dataframe', 50400, .1),
+    ('dataframe', 51400, .5),
+    ('dataframe', 52400, .9),
 ])
 def test_regressor_quantile(loop, output, listen_port, alpha):
     with cluster() as (s, [a, b]):
@@ -207,10 +210,11 @@ def test_regressor_local_predict(loop):
             p2 = a.to_local().predict(X)
             s1 = a.score(dX, dy)
             s2 = a.to_local().score(X, y)
+            print(s1)
 
             # Predictions and scores should be the same
-            assert_eq(p1, p2, rtol=.01, atol=.1)
-            np.isclose(s1, s2, atol=.01)
+            assert_eq(p1, p2)
+            np.isclose(s1, s2)
 
 
 def test_build_network_params():
