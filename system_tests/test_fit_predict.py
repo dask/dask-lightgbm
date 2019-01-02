@@ -2,7 +2,6 @@ import os
 
 import dask.dataframe as dd
 from dask.distributed import Client
-from sklearn.metrics import confusion_matrix
 
 import dask_lightgbm.core as dlgbm
 
@@ -22,9 +21,7 @@ def test_classify_newsread():
 
     dy_pred = d_classif.predict(dX, client=client)
 
-    print(confusion_matrix(dy.compute(), dy_pred.compute()))
-
-    acc_score = (dy == dy_pred).sum()/len(dy)
+    acc_score = (dy == dy_pred).sum() / len(dy)
     acc_score = acc_score.compute()
     print(acc_score)
 
