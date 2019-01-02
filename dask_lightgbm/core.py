@@ -216,13 +216,6 @@ class LGBMClassifier(lightgbm.LGBMClassifier):
         return predict(client, self.to_local(), X, proba=True, dtype=self.classes_[0].dtype, **kwargs)
     predict_proba.__doc__ = lightgbm.LGBMClassifier.predict_proba.__doc__
 
-    def score(self, X, y, client=None, compute=True):
-        # Source: dask_ml.metrics.accuracy_score
-        result = (y == self.predict(X, client=client)).mean()
-        if compute:
-            result = result.compute()
-        return result
-
     def to_local(self):
         model = lightgbm.LGBMClassifier(**self.get_params())
         model._Booster = self._Booster
@@ -266,22 +259,6 @@ class LGBMRegressor(lightgbm.LGBMRegressor):
             client = default_client()
         return predict(client, self.to_local(), X, **kwargs)
     predict.__doc__ = lightgbm.LGBMRegressor.predict.__doc__
-
-    def score(self, X, y, client=None, compute=True):
-        # Source: dask_ml.metrics.r2_score
-        # Ensure compatibility with Dataframes and Series
-        X = X.values if isinstance(X, dd._Frame) else X
-        y = y.values if isinstance(y, dd._Frame) else y
-
-        yp = self.predict(X, client=client)
-
-        numerator = ((y - yp) ** 2).sum()
-        denominator = ((y - yp.mean()) ** 2).sum()
-
-        result = 1 - numerator / denominator
-        if compute:
-            result = result.compute()
-        return result
 
     def to_local(self):
         model = lightgbm.LGBMRegressor(**self.get_params())
