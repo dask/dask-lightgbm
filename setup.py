@@ -20,7 +20,7 @@ extras_require = {
         'requests'
     ],
     "sparse": [
-        "sparse>=0.5.0",
+        "sparse==0.5.0",
         "scipy>=1.0.0"
     ]
 }
