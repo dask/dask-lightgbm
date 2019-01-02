@@ -1,3 +1,4 @@
+import os
 import gzip
 import unittest
 
@@ -20,7 +21,11 @@ def load_data(path):
 class FitPredictTest(unittest.TestCase):
 
     def setUp(self):
-        self.client = Client("scheduler:8786")
+        # Test with either distributed scheduler or threaded scheduler (easier to setup)
+        if os.getenv('SCHEDULER'):
+            self.client = Client(os.getenv('SCHEDULER'))
+        else:
+            self.client = Client()
 
     def test_classify_newsread(self):
         data = dd.read_csv("./system_tests/data/*.gz", compression="gzip", blocksize=None)
@@ -34,10 +39,11 @@ class FitPredictTest(unittest.TestCase):
 
         print(confusion_matrix(dy.compute(), dy_pred.compute()))
 
-        s1 = (dy == dy_pred).sum()/len(dy)
-        s2 = d_classif.score(dX, dy, client=self.client)
-        self.assertEqual(s1, s2)
-        self.assertGreaterEqual(s2, 0.8)
+        acc_score = (dy == dy_pred).sum()/len(dy)
+        acc_score = acc_score.compute()
+        print(acc_score)
+
+        self.assertGreaterEqual(acc_score, 0.8)
 
     def test_regress_newsread(self):
         data = dd.read_csv("./system_tests/data/*.gz", compression="gzip", blocksize=None)
@@ -47,6 +53,13 @@ class FitPredictTest(unittest.TestCase):
         d_regress = dlgbm.LGBMRegressor(n_estimators=50, local_listen_port=13400)
         d_regress.fit(dX, dy)
 
-        d_regress.predict(dX, client=self.client)
+        dy_pred = d_regress.predict(dX, client=self.client)
 
-        self.assertGreaterEqual(d_regress.score(dX, dy, client=self.client), 0.8)
+        # The dask_ml.metrics.r2_score method fails with dataframes so we compute the R2 score ourselves
+        numerator = ((dy - dy_pred) ** 2).sum()
+        denominator = ((dy - dy.mean()) ** 2).sum()
+        r2_score = 1 - numerator / denominator
+        r2_score = r2_score.compute()
+        print(r2_score)
+
+        self.assertGreaterEqual(r2_score, 0.8)

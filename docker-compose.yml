@@ -18,6 +18,8 @@ services:
       dockerfile: Dockerfile.test
     image: dask-lightgbm
     hostname: dask-worker
+    environment:
+      - SCHEDULER=tcp://scheduler:8786
     command: ["dask-worker", "--nprocs", "2", "--nthreads", "2", "scheduler:8786"]
 
   client:

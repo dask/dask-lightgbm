@@ -13,6 +13,7 @@ import scipy.sparse
 import sparse
 from dask.array.utils import assert_eq
 from dask.distributed import Client
+from dask_ml.metrics import accuracy_score, r2_score
 from distributed.utils_test import gen_cluster, loop, cluster  # noqa
 from sklearn.datasets import make_blobs, make_regression
 from sklearn.metrics import confusion_matrix
@@ -72,8 +73,8 @@ def test_classifier(loop, output, listen_port, centers):
             a = dlgbm.LGBMClassifier(local_listen_port=listen_port)
             a = a.fit(dX, dy, sample_weight=dw)
             p1 = a.predict(dX, client=client)
+            s1 = accuracy_score(dy, p1)
             p1 = p1.compute()
-            s1 = a.score(dX, dy)
 
             b = lightgbm.LGBMClassifier()
             b.fit(X, y, sample_weight=w)
@@ -148,8 +149,10 @@ def test_regressor(loop, output, listen_port):
 
             a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42)
             a = a.fit(dX, dy, client=client, sample_weight=dw)
-            s1 = a.score(dX, dy, client=client)
-            p1 = a.predict(dX, client=client).compute()
+            p1 = a.predict(dX, client=client)
+            if output != 'dataframe':
+                s1 = r2_score(dy, p1)
+            p1 = p1.compute()
 
             b = lightgbm.LGBMRegressor(seed=42)
             b.fit(X, y, sample_weight=w)
@@ -157,8 +160,8 @@ def test_regressor(loop, output, listen_port):
             p2 = b.predict(X)
 
             # Scores should be the same
-            assert_eq(s1, s2, atol=.01)
-            print(s1)
+            if output != 'dataframe':
+                assert_eq(s1, s2, atol=.01)
 
             # Predictions should be roughly the same
             assert_eq(y, p1, rtol=1., atol=50.)
@@ -206,9 +209,10 @@ def test_regressor_local_predict(loop):
 
             a = dlgbm.LGBMRegressor(local_listen_port=30400, seed=42)
             a = a.fit(dX, dy, sample_weight=dw)
-            p1 = a.predict(dX).compute()
+            p1 = a.predict(dX)
             p2 = a.to_local().predict(X)
-            s1 = a.score(dX, dy)
+            s1 = r2_score(dy, p1)
+            p1 = p1.compute()
             s2 = a.to_local().score(X, y)
             print(s1)
 

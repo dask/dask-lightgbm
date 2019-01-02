@@ -16,6 +16,7 @@ extras_require = {
         "pytest>=3.9.0",
         "pandas>=0.23.0",
         'dask[dataframe]',
+        'dask-ml',
         'requests'
     ],
     "sparse": [
