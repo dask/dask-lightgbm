@@ -233,7 +233,7 @@ def test_build_network_params():
         "machines": "192.168.0.1:12400,192.168.0.2:12401,192.168.0.3:12402",
         "local_listen_port": 12401,
         "num_machines": len(workers_ips),
-        "time_out": 120
+        "listen_time_out": 120
     }
     assert exp_params == params
 
