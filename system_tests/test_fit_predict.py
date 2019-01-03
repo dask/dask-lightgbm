@@ -1,17 +1,18 @@
 import os
+import pytest
 
 import dask.dataframe as dd
 from dask.distributed import Client
 
 import dask_lightgbm.core as dlgbm
 
-if os.getenv('SCHEDULER'):
-    client = Client(os.getenv('SCHEDULER'))
-else:
-    client = Client()
+
+@pytest.fixture(scope='module')
+def client():
+    return Client(os.getenv('SCHEDULER')) if os.getenv('SCHEDULER') else Client()
 
 
-def test_classify_newsread():
+def test_classify_newsread(client):
     data = dd.read_csv("./system_tests/data/*.gz", compression="gzip", blocksize=None)
     dX = data.iloc[:, :-1]
     dy = data.iloc[:, -1]
@@ -28,7 +29,7 @@ def test_classify_newsread():
     assert acc_score > 0.8
 
 
-def test_regress_newsread():
+def test_regress_newsread(client):
     data = dd.read_csv("./system_tests/data/*.gz", compression="gzip", blocksize=None)
     dX = data.iloc[:, 1:]
     dy = data.iloc[:, 0]
