@@ -14,6 +14,7 @@ install_requires = [
 extras_require = {
     "dev": [
         "pytest>=3.9.0",
+        "pytest-rerunfailures>=5.0",
         "pandas>=0.23.0",
         'dask[dataframe]',
         'dask-ml',

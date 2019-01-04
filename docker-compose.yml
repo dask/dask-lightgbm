@@ -28,4 +28,4 @@ services:
       dockerfile: Dockerfile.test
     image: dask-lightgbm
     hostname: dask-client
-    command: ["pytest", "/app/system_tests"]
+    command: ["pytest", "/app/system_tests", "--reruns", "3", "--reruns-delay", "30"]
