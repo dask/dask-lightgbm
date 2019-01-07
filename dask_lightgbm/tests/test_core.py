@@ -64,16 +64,8 @@ def _create_data(objective, n_samples=100, centers=2, output="array", chunk_size
     return X, y, w, dX, dy, dw
 
 
-@pytest.mark.parametrize("output, centers", [ #noqa
-    ('array', [[-4, -4], [4, 4]]),
-    ('array', [[-4, -4], [4, 4], [-4, 4]]),
-    ('scipy_csr_matrix', [[-4, -4], [4, 4]]),
-    ('scipy_csr_matrix', [[-4, -4], [4, 4], [-4, 4]]),
-    ('sparse', [[-4, -4], [4, 4]]),
-    ('sparse', [[-4, -4], [4, 4], [-4, 4]]),
-    ('dataframe', [[-4, -4], [4, 4]]),
-    ('dataframe', [[-4, -4], [4, 4], [-4, 4]])
-    ])  # noqa
+@pytest.mark.parametrize('output', ['array', 'scipy_csr_matrix', 'sparse', 'dataframe'])
+@pytest.mark.parametrize('centers', [[[-4, -4], [4, 4]], [[-4, -4], [4, 4], [-4, 4]]])  # noqa
 def test_classifier(loop, output, listen_port, centers):
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop) as client:
@@ -100,16 +92,8 @@ def test_classifier(loop, output, listen_port, centers):
             assert_eq(y, p2)
 
 
-@pytest.mark.parametrize("output, centers", [ #noqa
-    ('array', [[-4, -4], [4, 4]]),
-    ('array', [[-4, -4], [4, 4], [-4, 4]]),
-    ('scipy_csr_matrix', [[-4, -4], [4, 4]]),
-    ('scipy_csr_matrix', [[-4, -4], [4, 4], [-4, 4]]),
-    ('sparse', [[-4, -4], [4, 4]]),
-    ('sparse', [[-4, -4], [4, 4], [-4, 4]]),
-    ('dataframe', [[-4, -4], [4, 4]]),
-    ('dataframe', [[-4, -4], [4, 4], [-4, 4]])
-    ])  # noqa
+@pytest.mark.parametrize('output', ['array', 'scipy_csr_matrix', 'sparse', 'dataframe'])
+@pytest.mark.parametrize('centers', [[[-4, -4], [4, 4]], [[-4, -4], [4, 4], [-4, 4]]])  # noqa
 def test_classifier_proba(loop, output, listen_port, centers):
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop) as client:
@@ -145,12 +129,7 @@ def test_classifier_local_predict(loop, listen_port): #noqa
             assert_eq(y, p2)
 
 
-@pytest.mark.parametrize("output", [
-    ('array', ),
-    ('scipy_csr_matrix', ),
-    ('sparse', ),
-    ('dataframe', ),
-])
+@pytest.mark.parametrize('output', ['array', 'scipy_csr_matrix', 'sparse', 'dataframe'])
 def test_regressor(loop, output, listen_port):
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop) as client:
@@ -177,20 +156,8 @@ def test_regressor(loop, output, listen_port):
             assert_eq(y, p2, rtol=1., atol=50.)
 
 
-@pytest.mark.parametrize("output, alpha", [
-    ('array', .1),
-    ('array', .5),
-    ('array', .9),
-    ('scipy_csr_matrix', .1),
-    ('scipy_csr_matrix', .5),
-    ('scipy_csr_matrix', .9),
-    ('sparse', .1),
-    ('sparse', .5),
-    ('sparse', .9),
-    ('dataframe', .1),
-    ('dataframe', .5),
-    ('dataframe', .9),
-])
+@pytest.mark.parametrize('output', ['array', 'scipy_csr_matrix', 'sparse', 'dataframe'])
+@pytest.mark.parametrize('alpha', [.1, .5, .9])
 def test_regressor_quantile(loop, output, listen_port, alpha):
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop) as client:
