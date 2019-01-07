@@ -23,6 +23,15 @@ import dask_lightgbm.core as dlgbm
 distributed.comm.utils._offload_executor = ThreadPoolExecutor(max_workers=2)
 
 
+@pytest.fixture()
+def listen_port():
+    listen_port.port += 10
+    return listen_port.port
+
+
+listen_port.port = 13000
+
+
 def _create_data(objective, n_samples=100, centers=2, output="array", chunk_size=50):
     if objective == 'classification':
         X, y = make_blobs(n_samples=n_samples, centers=centers, random_state=42)
@@ -55,15 +64,15 @@ def _create_data(objective, n_samples=100, centers=2, output="array", chunk_size
     return X, y, w, dX, dy, dw
 
 
-@pytest.mark.parametrize("output, listen_port, centers", [ #noqa
-    ('array', 11400, [[-4, -4], [4, 4]]),
-    ('array', 12400, [[-4, -4], [4, 4], [-4, 4]]),
-    ('scipy_csr_matrix', 13400, [[-4, -4], [4, 4]]),
-    ('scipy_csr_matrix', 14400, [[-4, -4], [4, 4], [-4, 4]]),
-    ('sparse', 15400, [[-4, -4], [4, 4]]),
-    ('sparse', 16400, [[-4, -4], [4, 4], [-4, 4]]),
-    ('dataframe', 17400, [[-4, -4], [4, 4]]),
-    ('dataframe', 18400, [[-4, -4], [4, 4], [-4, 4]])
+@pytest.mark.parametrize("output, centers", [ #noqa
+    ('array', [[-4, -4], [4, 4]]),
+    ('array', [[-4, -4], [4, 4], [-4, 4]]),
+    ('scipy_csr_matrix', [[-4, -4], [4, 4]]),
+    ('scipy_csr_matrix', [[-4, -4], [4, 4], [-4, 4]]),
+    ('sparse', [[-4, -4], [4, 4]]),
+    ('sparse', [[-4, -4], [4, 4], [-4, 4]]),
+    ('dataframe', [[-4, -4], [4, 4]]),
+    ('dataframe', [[-4, -4], [4, 4], [-4, 4]])
     ])  # noqa
 def test_classifier(loop, output, listen_port, centers):
     with cluster() as (s, [a, b]):
@@ -91,15 +100,15 @@ def test_classifier(loop, output, listen_port, centers):
             assert_eq(y, p2)
 
 
-@pytest.mark.parametrize("output, listen_port, centers", [ #noqa
-    ('array', 21400, [[-4, -4], [4, 4]]),
-    ('array', 22400, [[-4, -4], [4, 4], [-4, 4]]),
-    ('scipy_csr_matrix', 23400, [[-4, -4], [4, 4]]),
-    ('scipy_csr_matrix', 24400, [[-4, -4], [4, 4], [-4, 4]]),
-    ('sparse', 25400, [[-4, -4], [4, 4]]),
-    ('sparse', 26400, [[-4, -4], [4, 4], [-4, 4]]),
-    ('dataframe', 27400, [[-4, -4], [4, 4]]),
-    ('dataframe', 28400, [[-4, -4], [4, 4], [-4, 4]])
+@pytest.mark.parametrize("output, centers", [ #noqa
+    ('array', [[-4, -4], [4, 4]]),
+    ('array', [[-4, -4], [4, 4], [-4, 4]]),
+    ('scipy_csr_matrix', [[-4, -4], [4, 4]]),
+    ('scipy_csr_matrix', [[-4, -4], [4, 4], [-4, 4]]),
+    ('sparse', [[-4, -4], [4, 4]]),
+    ('sparse', [[-4, -4], [4, 4], [-4, 4]]),
+    ('dataframe', [[-4, -4], [4, 4]]),
+    ('dataframe', [[-4, -4], [4, 4], [-4, 4]])
     ])  # noqa
 def test_classifier_proba(loop, output, listen_port, centers):
     with cluster() as (s, [a, b]):
@@ -118,12 +127,12 @@ def test_classifier_proba(loop, output, listen_port, centers):
             assert_eq(p1, p2, atol=0.3)
 
 
-def test_classifier_local_predict(loop): #noqa
+def test_classifier_local_predict(loop, listen_port): #noqa
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop):
             X, y, w, dX, dy, dw = _create_data('classification', output="array")
 
-            a = dlgbm.LGBMClassifier(local_listen_port=10400)
+            a = dlgbm.LGBMClassifier(local_listen_port=listen_port)
             a = a.fit(dX, dy, sample_weight=dw)
             p1 = a.to_local().predict(dX)
 
@@ -136,11 +145,11 @@ def test_classifier_local_predict(loop): #noqa
             assert_eq(y, p2)
 
 
-@pytest.mark.parametrize("output, listen_port", [
-    ('array', 31400),
-    ('scipy_csr_matrix', 32400),
-    ('sparse', 33400),
-    ('dataframe', 34400),
+@pytest.mark.parametrize("output", [
+    ('array', ),
+    ('scipy_csr_matrix', ),
+    ('sparse', ),
+    ('dataframe', ),
 ])
 def test_regressor(loop, output, listen_port):
     with cluster() as (s, [a, b]):
@@ -168,19 +177,19 @@ def test_regressor(loop, output, listen_port):
             assert_eq(y, p2, rtol=1., atol=50.)
 
 
-@pytest.mark.parametrize("output, listen_port, alpha", [
-    ('array', 41400, .1),
-    ('array', 42400, .5),
-    ('array', 43400, .9),
-    ('scipy_csr_matrix', 44400, .1),
-    ('scipy_csr_matrix', 45400, .5),
-    ('scipy_csr_matrix', 46400, .9),
-    ('sparse', 47400, .1),
-    ('sparse', 48400, .5),
-    ('sparse', 49400, .9),
-    ('dataframe', 50400, .1),
-    ('dataframe', 51400, .5),
-    ('dataframe', 52400, .9),
+@pytest.mark.parametrize("output, alpha", [
+    ('array', .1),
+    ('array', .5),
+    ('array', .9),
+    ('scipy_csr_matrix', .1),
+    ('scipy_csr_matrix', .5),
+    ('scipy_csr_matrix', .9),
+    ('sparse', .1),
+    ('sparse', .5),
+    ('sparse', .9),
+    ('dataframe', .1),
+    ('dataframe', .5),
+    ('dataframe', .9),
 ])
 def test_regressor_quantile(loop, output, listen_port, alpha):
     with cluster() as (s, [a, b]):
@@ -202,12 +211,12 @@ def test_regressor_quantile(loop, output, listen_port, alpha):
             np.isclose(q2, alpha, atol=.1)
 
 
-def test_regressor_local_predict(loop):
+def test_regressor_local_predict(loop, listen_port):
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop):
             X, y, w, dX, dy, dw = _create_data('regression', output="array")
 
-            a = dlgbm.LGBMRegressor(local_listen_port=30400, seed=42)
+            a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42)
             a = a.fit(dX, dy, sample_weight=dw)
             p1 = a.predict(dX)
             p2 = a.to_local().predict(X)
