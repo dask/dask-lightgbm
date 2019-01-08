@@ -1,13 +1,13 @@
 import logging
 from collections import defaultdict
 
+import dask.array as da
+import dask.dataframe as dd
 import lightgbm
 import numpy as np
 import pandas as pd
 from lightgbm.basic import _safe_call, _LIB
 from toolz import first, assoc
-import dask.dataframe as dd
-import dask.array as da
 
 try:
     import sparse
@@ -85,7 +85,6 @@ def _fit_local(params, model_factory, list_of_parts, worker_addresses, return_mo
         return None
 
 
-
 def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
     data_parts = X.to_delayed()
     label_parts = y.to_delayed()
@@ -144,7 +143,9 @@ def _predict_part(part, model, proba, **kwargs):
         X = part.values
     else:
         X = part
-    if proba:
+    if not X.shape[0]:
+        result = []
+    elif proba:
         result = model.predict_proba(X, **kwargs)
     else:
         result = model.predict(X, **kwargs)
@@ -221,6 +222,47 @@ class LGBMClassifier(lightgbm.LGBMClassifier):
         model._le = self._le
         model._classes = self._classes
         model._n_classes = self._n_classes
+        model._n_features = self._n_features
+        model._evals_result = self._evals_result
+        model._best_iteration = self._best_iteration
+        model._best_score = self._best_score
+
+        return model
+
+
+class LGBMRegressor(lightgbm.LGBMRegressor):
+
+    def fit(self, X, y=None, sample_weight=None, client=None, **kwargs):
+        if client is None:
+            client = default_client()
+        model_factory = lightgbm.LGBMRegressor
+        params = self.get_params(True)
+
+        model = train(client, X, y, params, model_factory, sample_weight, **kwargs)
+        self.set_params(**model.get_params())
+        self._Booster = model._Booster
+        self._n_features = model._n_features
+        self._evals_result = model._evals_result
+        self._best_iteration = model._best_iteration
+        self._best_score = model._best_score
+
+        return self
+    fit.__doc__ = lightgbm.LGBMRegressor.fit.__doc__
+
+    def _network_params(self):
+        return {
+            "machines": self.machines
+        }
+
+    def predict(self, X, client=None, **kwargs):
+        if client is None:
+            client = default_client()
+        return predict(client, self.to_local(), X, **kwargs)
+    predict.__doc__ = lightgbm.LGBMRegressor.predict.__doc__
+
+    def to_local(self):
+        model = lightgbm.LGBMRegressor(**self.get_params())
+        model._Booster = self._Booster
         model._n_features = self._n_features
         model._evals_result = self._evals_result
         model._best_iteration = self._best_iteration
