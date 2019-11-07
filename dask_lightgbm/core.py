@@ -144,7 +144,7 @@ def _predict_part(part, model, proba, **kwargs):
     else:
         X = part
     if not X.shape[0]:
-        result = []
+        result = np.array([])
     elif proba:
         result = model.predict_proba(X, **kwargs)
     else:
