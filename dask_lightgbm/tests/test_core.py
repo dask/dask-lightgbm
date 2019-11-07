@@ -214,7 +214,7 @@ def test_build_network_params():
     assert exp_params == params
 
 
-@gen_cluster(client=True, timeout=None, check_new_threads=False)
+@gen_cluster(client=True, timeout=None)
 def test_errors(c, s, a, b):
     def f(part):
         raise Exception('foo')
