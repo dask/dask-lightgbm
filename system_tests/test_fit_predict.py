@@ -9,7 +9,8 @@ import dask_lightgbm.core as dlgbm
 
 @pytest.fixture(scope='module')
 def client():
-    return Client(os.getenv('SCHEDULER')) if os.getenv('SCHEDULER') else Client()
+    with Client(os.getenv('SCHEDULER')) as client:
+        yield client
 
 
 @pytest.fixture()
