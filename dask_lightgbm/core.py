@@ -207,13 +207,13 @@ class LGBMClassifier(lightgbm.LGBMClassifier):
     def predict(self, X, client=None, **kwargs):
         if client is None:
             client = default_client()
-        return predict(client, self.to_local(), X, dtype=self.classes_[0].dtype, **kwargs)
+        return predict(client, self.to_local(), X, dtype=self.classes_.dtype, **kwargs)
     predict.__doc__ = lightgbm.LGBMClassifier.predict.__doc__
 
     def predict_proba(self, X, client=None, **kwargs):
         if client is None:
             client = default_client()
-        return predict(client, self.to_local(), X, proba=True, dtype=self.classes_[0].dtype, **kwargs)
+        return predict(client, self.to_local(), X, proba=True, **kwargs)
     predict_proba.__doc__ = lightgbm.LGBMClassifier.predict_proba.__doc__
 
     def to_local(self):
