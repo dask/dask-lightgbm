@@ -17,7 +17,8 @@ extras_require = {
         "pandas>=0.23.0",
         'dask[dataframe]',
         'dask-ml',
-        'requests'
+        'requests',
+        'fsspec>=0.5.1'
     ],
     "sparse": [
         "sparse==0.5.0",
