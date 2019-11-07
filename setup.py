@@ -5,24 +5,24 @@ import os
 from setuptools import setup
 
 install_requires = [
-    'numpy>=0.14.0',
-    'lightgbm>=2.2.2',
-    'dask>=0.16.0',
-    'distributed>=2.2.0'
+    'numpy>=1.17.3',
+    'lightgbm>=2.3.0',
+    'dask>=2.6.0',
+    'distributed>=2.6.0'
 ]
 
 extras_require = {
-    "dev": [
-        "pytest>=3.9.0",
-        "pandas>=0.23.0",
+    'dev': [
+        'pytest>=5.2.2',
+        'pandas>=0.25.3',
         'dask[dataframe]',
-        'dask-ml',
-        'requests',
-        'fsspec>=0.5.1'
+        'dask-ml>=1.1.1',
+        'requests>=2.22.0',
+        'fsspec>=0.5.2'
     ],
-    "sparse": [
-        "sparse==0.5.0",
-        "scipy>=1.0.0"
+    'sparse': [
+        'sparse==0.5.0',
+        'scipy>=1.3.1'
     ]
 }
 
