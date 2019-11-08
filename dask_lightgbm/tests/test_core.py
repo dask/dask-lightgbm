@@ -209,12 +209,12 @@ def test_build_network_params():
         "machines": "192.168.0.1:12400,192.168.0.2:12401,192.168.0.3:12402",
         "local_listen_port": 12401,
         "num_machines": len(workers_ips),
-        "listen_time_out": 120
+        "time_out": 120
     }
     assert exp_params == params
 
 
-@gen_cluster(client=True, timeout=None, check_new_threads=False)
+@gen_cluster(client=True, timeout=None)
 def test_errors(c, s, a, b):
     def f(part):
         raise Exception('foo')

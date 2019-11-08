@@ -32,12 +32,12 @@ def parse_host_port(address):
     return host, port
 
 
-def build_network_params(worker_addresses, local_worker_ip, local_listen_port, listen_time_out):
+def build_network_params(worker_addresses, local_worker_ip, local_listen_port, time_out):
     addr_port_map = {addr: (local_listen_port + i) for i, addr in enumerate(worker_addresses)}
     params = {
         "machines": ",".join([parse_host_port(addr)[0] + ":" + str(port) for addr, port in addr_port_map.items()]),
         "local_listen_port": addr_port_map[local_worker_ip],
-        "listen_time_out": listen_time_out,
+        "time_out": time_out,
         "num_machines": len(addr_port_map)
     }
     return params
@@ -56,10 +56,8 @@ def concat(L):
         raise TypeError("Data must be either numpy arrays or pandas dataframes. Got %s" % type(L[0]))
 
 
-def _fit_local(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400, listen_time_out=120,
-               **kwargs):
-    network_params = build_network_params(worker_addresses, get_worker().address, local_listen_port,
-                                          listen_time_out)
+def _fit_local(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400, time_out=120, **kwargs):
+    network_params = build_network_params(worker_addresses, get_worker().address, local_listen_port, time_out)
     params = {**params, **network_params}
 
     # Prepare data
@@ -127,7 +125,7 @@ def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
                                          list_of_parts=list_of_parts,
                                          worker_addresses=list(worker_map.keys()),
                                          local_listen_port=params.get("local_listen_port", 12400),
-                                         listen_time_out=params.get("listen_time_out", 120),
+                                         time_out=params.get("time_out", 120),
                                          return_model=worker==master_worker,
                                          **kwargs)
                            for worker, list_of_parts in worker_map.items()]
@@ -144,7 +142,7 @@ def _predict_part(part, model, proba, **kwargs):
     else:
         X = part
     if not X.shape[0]:
-        result = []
+        result = np.array([])
     elif proba:
         result = model.predict_proba(X, **kwargs)
     else:
@@ -207,13 +205,13 @@ class LGBMClassifier(lightgbm.LGBMClassifier):
     def predict(self, X, client=None, **kwargs):
         if client is None:
             client = default_client()
-        return predict(client, self.to_local(), X, dtype=self.classes_[0].dtype, **kwargs)
+        return predict(client, self.to_local(), X, dtype=self.classes_.dtype, **kwargs)
     predict.__doc__ = lightgbm.LGBMClassifier.predict.__doc__
 
     def predict_proba(self, X, client=None, **kwargs):
         if client is None:
             client = default_client()
-        return predict(client, self.to_local(), X, proba=True, dtype=self.classes_[0].dtype, **kwargs)
+        return predict(client, self.to_local(), X, proba=True, **kwargs)
     predict_proba.__doc__ = lightgbm.LGBMClassifier.predict_proba.__doc__
 
     def to_local(self):
