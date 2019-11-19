@@ -1,7 +1,7 @@
 import os
-import pytest
 
 import dask.dataframe as dd
+import pytest
 from dask.distributed import Client
 
 import dask_lightgbm.core as dlgbm

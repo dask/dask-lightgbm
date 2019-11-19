@@ -6,6 +6,8 @@ import dask.dataframe as dd
 import lightgbm
 import numpy as np
 import pandas as pd
+from dask import delayed
+from dask.distributed import wait, default_client, get_worker
 from lightgbm.basic import _safe_call, _LIB
 from toolz import first, assoc
 
@@ -17,9 +19,6 @@ try:
     import scipy.sparse as ss
 except ImportError:
     ss = False
-
-from dask import delayed
-from dask.distributed import wait, default_client, get_worker
 
 logger = logging.getLogger(__name__)
 
