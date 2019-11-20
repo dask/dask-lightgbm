@@ -34,10 +34,10 @@ def parse_host_port(address):
 def build_network_params(worker_addresses, local_worker_ip, local_listen_port, time_out):
     addr_port_map = {addr: (local_listen_port + i) for i, addr in enumerate(worker_addresses)}
     params = {
-        "machines": ",".join([parse_host_port(addr)[0] + ":" + str(port) for addr, port in addr_port_map.items()]),
-        "local_listen_port": addr_port_map[local_worker_ip],
-        "time_out": time_out,
-        "num_machines": len(addr_port_map)
+        'machines': ','.join([parse_host_port(addr)[0] + ':' + str(port) for addr, port in addr_port_map.items()]),
+        'local_listen_port': addr_port_map[local_worker_ip],
+        'time_out': time_out,
+        'num_machines': len(addr_port_map)
     }
     return params
 
@@ -52,7 +52,7 @@ def concat(L):
     elif sparse and isinstance(L[0], sparse.SparseArray):
         return sparse.concatenate(L, axis=0)
     else:
-        raise TypeError("Data must be either numpy arrays or pandas dataframes. Got %s" % type(L[0]))
+        raise TypeError('Data must be either numpy arrays or pandas dataframes. Got %s' % type(L[0]))
 
 
 def _fit_local(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400, time_out=120, **kwargs):
@@ -114,17 +114,17 @@ def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
         worker_map[first(workers)].append(key_to_part_dict[key])
     master_worker = first(worker_map)
     ncores = client.ncores()  # Number of cores per worker
-    if "tree_learner" not in params or params['tree_learner'].lower() not in {"data", "feature","voting"}:
-        logger.warning("Parameter tree_learner not set or set to incorrect value (%s), using 'data' as default", params.get("tree_learner", None))
-        params['tree_learner'] = "data"
+    if 'tree_learner' not in params or params['tree_learner'].lower() not in {'data', 'feature', 'voting'}:
+        logger.warning('Parameter tree_learner not set or set to incorrect value (%s), using "data" as default', params.get('tree_learner', None))
+        params['tree_learner'] = 'data'
     # Tell each worker to init the booster on the chunks/parts that it has locally
     futures_classifiers = [client.submit(_fit_local,
                                          model_factory=model_factory,
                                          params=assoc(params, 'num_threads', ncores[worker]),
                                          list_of_parts=list_of_parts,
                                          worker_addresses=list(worker_map.keys()),
-                                         local_listen_port=params.get("local_listen_port", 12400),
-                                         time_out=params.get("time_out", 120),
+                                         local_listen_port=params.get('local_listen_port', 12400),
+                                         time_out=params.get('time_out', 120),
                                          return_model=worker==master_worker,
                                          **kwargs)
                            for worker, list_of_parts in worker_map.items()]
@@ -198,7 +198,7 @@ class LGBMClassifier(lightgbm.LGBMClassifier):
 
     def _network_params(self):
         return {
-            "machines": self.machines
+            'machines': self.machines
         }
 
     def predict(self, X, client=None, **kwargs):
@@ -248,7 +248,7 @@ class LGBMRegressor(lightgbm.LGBMRegressor):
 
     def _network_params(self):
         return {
-            "machines": self.machines
+            'machines': self.machines
         }
 
     def predict(self, X, client=None, **kwargs):

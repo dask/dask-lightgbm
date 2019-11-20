@@ -23,7 +23,7 @@ listen_port.port = 12400
 
 
 def test_classify_newsread(client, listen_port):
-    data = dd.read_csv("./system_tests/data/*.gz", compression="gzip", blocksize=None)
+    data = dd.read_csv('./system_tests/data/*.gz', compression='gzip', blocksize=None)
     dX = data.iloc[:, :-1]
     dy = data.iloc[:, -1]
 
@@ -40,7 +40,7 @@ def test_classify_newsread(client, listen_port):
 
 
 def test_regress_newsread(client, listen_port):
-    data = dd.read_csv("./system_tests/data/*.gz", compression="gzip", blocksize=None)
+    data = dd.read_csv('./system_tests/data/*.gz', compression='gzip', blocksize=None)
     dX = data.iloc[:, 1:]
     dy = data.iloc[:, 0]
 
