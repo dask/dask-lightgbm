@@ -194,11 +194,6 @@ class LGBMClassifier(lightgbm.LGBMClassifier):
         return self
     fit.__doc__ = lightgbm.LGBMClassifier.fit.__doc__
 
-    def _network_params(self):
-        return {
-            'machines': self.machines
-        }
-
     def predict(self, X, client=None, **kwargs):
         if client is None:
             client = default_client()
@@ -243,11 +238,6 @@ class LGBMRegressor(lightgbm.LGBMRegressor):
 
         return self
     fit.__doc__ = lightgbm.LGBMRegressor.fit.__doc__
-
-    def _network_params(self):
-        return {
-            'machines': self.machines
-        }
 
     def predict(self, X, client=None, **kwargs):
         if client is None:
