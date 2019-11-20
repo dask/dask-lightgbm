@@ -53,77 +53,74 @@ def concat(L):
         raise TypeError(f'Data must be either numpy arrays or pandas dataframes. Got {type(L[0])}.')
 
 
-def _fit_local(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400, time_out=120, **kwargs):
+def _train_part(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400, time_out=120, **kwargs):
     network_params = build_network_params(worker_addresses, get_worker().address, local_listen_port, time_out)
-    params = {**params, **network_params}
+    params.update(network_params)
 
-    # Prepare data
-    if len(list_of_parts[0]) == 3:
-        data, labels, weight = zip(*list_of_parts)
-        weight = concat(weight)
-    else:
-        data, labels = zip(*list_of_parts)
-        weight = None
-
-    data = concat(data)  # Concatenate many parts into one
-    labels = concat(labels)
+    # Concatenate many parts into one
+    parts = tuple(zip(*list_of_parts))
+    data = concat(parts[0])
+    label = concat(parts[1])
+    weight = concat(parts[2]) if len(parts) == 3 else None
 
     try:
-        classifier = model_factory(**params)
-        classifier.fit(data, labels, sample_weight=weight)
+        model = model_factory(**params)
+        model.fit(data, label, sample_weight=weight)
     finally:
         _safe_call(_LIB.LGBM_NetworkFree())
 
-    if return_model:
-        return classifier
-    else:
-        return None
+    return model if return_model else None
 
 
-def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
-    data_parts = X.to_delayed()
-    label_parts = y.to_delayed()
-    if isinstance(data_parts, np.ndarray):
-        assert data_parts.shape[1] == 1
-        data_parts = data_parts.flatten().tolist()
-    if isinstance(label_parts, np.ndarray):
-        assert label_parts.ndim == 1 or label_parts.shape[1] == 1
-        label_parts = label_parts.flatten().tolist()
+def _split_to_parts(data, is_matrix):
+    parts = data.to_delayed()
+    if isinstance(parts, np.ndarray):
+        assert (parts.shape[1] == 1) if is_matrix else (parts.ndim == 1 or parts.shape[1] == 1)
+        parts = parts.flatten().tolist()
+    return parts
 
-    # Arrange parts into tuples.  This enforces co-locality
-    if sample_weight is not None:
-        sample_weight_parts = sample_weight.to_delayed()
-        if isinstance(sample_weight_parts, np.ndarray):
-            assert sample_weight_parts.ndim == 1 or sample_weight_parts.shape[1] == 1
-            sample_weight_parts = sample_weight_parts.flatten().tolist()
-        parts = list(map(delayed, zip(data_parts, label_parts, sample_weight_parts)))
-    else:
+
+def train(client, data, label, params, model_factory, weight=None, **kwargs):
+    # Split arrays/dataframes into parts. Arrange parts into tuples to enforce co-locality
+    data_parts = _split_to_parts(data, is_matrix=True)
+    label_parts = _split_to_parts(label, is_matrix=False)
+    if weight is None:
         parts = list(map(delayed, zip(data_parts, label_parts)))
+    else:
+        weight_parts = _split_to_parts(weight, is_matrix=False)
+        parts = list(map(delayed, zip(data_parts, label_parts, weight_parts)))
 
-    parts = client.compute(parts)  # Start computation in the background
+    # Start computation in the background
+    parts = client.compute(parts)
     wait(parts)
+
     for part in parts:
         if part.status == 'error':
-            part  # trigger error locally
+            return part  # trigger error locally
+
+    # Find locations of all parts and map them to particular Dask workers
     key_to_part_dict = dict([(part.key, part) for part in parts])
     who_has = client.who_has(parts)
     worker_map = defaultdict(list)
     for key, workers in who_has.items():
         worker_map[first(workers)].append(key_to_part_dict[key])
+
     master_worker = first(worker_map)
-    ncores = client.ncores()  # Number of cores per worker
+    worker_ncores = client.ncores()
+
     if 'tree_learner' not in params or params['tree_learner'].lower() not in {'data', 'feature', 'voting'}:
         logger.warning(f'Parameter tree_learner not set or set to incorrect value ({params.get("tree_learner", None)}), using "data" as default')
         params['tree_learner'] = 'data'
-    # Tell each worker to init the booster on the chunks/parts that it has locally
-    futures_classifiers = [client.submit(_fit_local,
+
+    # Tell each worker to train on the parts that it has locally
+    futures_classifiers = [client.submit(_train_part,
                                          model_factory=model_factory,
-                                         params=assoc(params, 'num_threads', ncores[worker]),
+                                         params=assoc(params, 'num_threads', worker_ncores[worker]),
                                          list_of_parts=list_of_parts,
                                          worker_addresses=list(worker_map.keys()),
                                          local_listen_port=params.get('local_listen_port', 12400),
                                          time_out=params.get('time_out', 120),
-                                         return_model=worker==master_worker,
+                                         return_model=(worker == master_worker),
                                          **kwargs)
                            for worker, list_of_parts in worker_map.items()]
 
