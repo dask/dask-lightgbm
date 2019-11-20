@@ -1,4 +1,5 @@
 import logging
+import urllib.parse
 from collections import defaultdict
 
 import dask.array as da
@@ -24,11 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 def parse_host_port(address):
-    if '://' in address:
-        address = address.rsplit('://', 1)[1]
-    host, port = address.split(':')
-    port = int(port)
-    return host, port
+    parsed = urllib.parse.urlparse(address)
+    return parsed.hostname, parsed.port
 
 
 def build_network_params(worker_addresses, local_worker_ip, local_listen_port, time_out):
