@@ -130,43 +130,38 @@ def train(client, data, label, params, model_factory, weight=None, **kwargs):
 
 
 def _predict_part(part, model, proba, **kwargs):
-
     if isinstance(part, pd.DataFrame):
-        X = part.values
+        data = part.values
     else:
-        X = part
-    if not X.shape[0]:
+        data = part
+
+    if data.shape[0] == 0:
         result = np.array([])
     elif proba:
-        result = model.predict_proba(X, **kwargs)
+        result = model.predict_proba(data, **kwargs)
     else:
-        result = model.predict(X, **kwargs)
+        result = model.predict(data, **kwargs)
 
     if isinstance(part, pd.DataFrame):
         if proba:
             result = pd.DataFrame(result, index=part.index)
         else:
             result = pd.Series(result, index=part.index, name='predictions')
+
     return result
 
 
 def predict(client, model, data, proba=False, dtype=np.float32, **kwargs):
-
     if isinstance(data, dd._Frame):
-        result = data.map_partitions(_predict_part, model=model, proba=proba, **kwargs)
-        result = result.values
+        return data.map_partitions(_predict_part, model=model, proba=proba, **kwargs).values
     elif isinstance(data, da.Array):
         if proba:
-            kwargs = dict(
-                drop_axis=None,
-                chunks=(data.chunks[0], (model.n_classes_,)),
-            )
+            kwargs['chunks'] = (data.chunks[0], (model.n_classes_,))
         else:
-            kwargs = dict(drop_axis=1)
-
-        result = data.map_blocks(_predict_part, model=model, proba=proba, dtype=dtype, **kwargs)
-
-    return result
+            kwargs['drop_axis'] = 1
+        return data.map_blocks(_predict_part, model=model, proba=proba, dtype=dtype, **kwargs)
+    else:
+        raise TypeError(f'Data must be either Dask array or dataframe. Got {type(data)}.')
 
 
 class LGBMClassifier(lightgbm.LGBMClassifier):
