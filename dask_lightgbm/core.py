@@ -32,7 +32,7 @@ def parse_host_port(address):
 def build_network_params(worker_addresses, local_worker_ip, local_listen_port, time_out):
     addr_port_map = {addr: (local_listen_port + i) for i, addr in enumerate(worker_addresses)}
     params = {
-        'machines': ','.join([parse_host_port(addr)[0] + ':' + str(port) for addr, port in addr_port_map.items()]),
+        'machines': ','.join(f'{parse_host_port(addr)[0]}:{port}' for addr, port in addr_port_map.items()),
         'local_listen_port': addr_port_map[local_worker_ip],
         'time_out': time_out,
         'num_machines': len(addr_port_map)
@@ -50,7 +50,7 @@ def concat(L):
     elif sparse and isinstance(L[0], sparse.SparseArray):
         return sparse.concatenate(L, axis=0)
     else:
-        raise TypeError('Data must be either numpy arrays or pandas dataframes. Got %s' % type(L[0]))
+        raise TypeError(f'Data must be either numpy arrays or pandas dataframes. Got {type(L[0])}.')
 
 
 def _fit_local(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400, time_out=120, **kwargs):
@@ -113,7 +113,7 @@ def train(client, X, y, params, model_factory, sample_weight=None, **kwargs):
     master_worker = first(worker_map)
     ncores = client.ncores()  # Number of cores per worker
     if 'tree_learner' not in params or params['tree_learner'].lower() not in {'data', 'feature', 'voting'}:
-        logger.warning('Parameter tree_learner not set or set to incorrect value (%s), using "data" as default', params.get('tree_learner', None))
+        logger.warning(f'Parameter tree_learner not set or set to incorrect value ({params.get("tree_learner", None)}), using "data" as default')
         params['tree_learner'] = 'data'
     # Tell each worker to init the booster on the chunks/parts that it has locally
     futures_classifiers = [client.submit(_fit_local,
