@@ -40,18 +40,18 @@ def build_network_params(worker_addresses, local_worker_ip, local_listen_port, t
     return params
 
 
-def concat(L):
-    if isinstance(L[0], np.ndarray):
-        return np.concatenate(L, axis=0)
-    elif isinstance(L[0], (pd.DataFrame, pd.Series)):
-        return pd.concat(L, axis=0)
-    elif ss and isinstance(L[0], ss.spmatrix):
-        return ss.vstack(L, format='csr')
-    elif sparse and isinstance(L[0], sparse.SparseArray):
-        return sparse.concatenate(L, axis=0)
+def concat(seq):
+    if isinstance(seq[0], np.ndarray):
+        return np.concatenate(seq, axis=0)
+    elif isinstance(seq[0], (pd.DataFrame, pd.Series)):
+        return pd.concat(seq, axis=0)
+    elif ss and isinstance(seq[0], ss.spmatrix):
+        return ss.vstack(seq, format='csr')
+    elif sparse and isinstance(seq[0], sparse.SparseArray):
+        return sparse.concatenate(seq, axis=0)
     else:
         raise TypeError('Data must be one of: numpy arrays, pandas dataframes, sparse matrices '
-                        f'(from scipy or from sparse). Got {type(L[0])}.')
+                        f'(from scipy or from sparse). Got {type(seq[0])}.')
 
 
 def _train_part(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400,
