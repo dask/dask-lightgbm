@@ -161,24 +161,29 @@ def predict(client, model, data, proba=False, dtype=np.float32, **kwargs):
         raise TypeError(f'Data must be either Dask array or dataframe. Got {type(data)}.')
 
 
-class LGBMClassifier(lightgbm.LGBMClassifier):
+class _LGBMModel:
+
+    @staticmethod
+    def _copy_extra_params(source, dest):
+        params = source.get_params()
+        attributes = source.__dict__
+        extra_param_names = set(attributes.keys()).difference(params.keys())
+        for name in extra_param_names:
+            setattr(dest, name, attributes[name])
+
+
+class LGBMClassifier(_LGBMModel, lightgbm.LGBMClassifier):
 
     def fit(self, X, y=None, sample_weight=None, client=None, **kwargs):
         if client is None:
             client = default_client()
+
         model_factory = lightgbm.LGBMClassifier
         params = self.get_params(True)
-
         model = train(client, X, y, params, model_factory, sample_weight, **kwargs)
+
         self.set_params(**model.get_params())
-        self._Booster = model._Booster
-        self._le = model._le
-        self._classes = model._classes
-        self._n_classes = model._n_classes
-        self._n_features = model._n_features
-        self._evals_result = model._evals_result
-        self._best_iteration = model._best_iteration
-        self._best_score = model._best_score
+        self._copy_extra_params(model, self)
 
         return self
     fit.__doc__ = lightgbm.LGBMClassifier.fit.__doc__
@@ -197,33 +202,22 @@ class LGBMClassifier(lightgbm.LGBMClassifier):
 
     def to_local(self):
         model = lightgbm.LGBMClassifier(**self.get_params())
-        model._Booster = self._Booster
-        model._le = self._le
-        model._classes = self._classes
-        model._n_classes = self._n_classes
-        model._n_features = self._n_features
-        model._evals_result = self._evals_result
-        model._best_iteration = self._best_iteration
-        model._best_score = self._best_score
-
+        self._copy_extra_params(self, model)
         return model
 
 
-class LGBMRegressor(lightgbm.LGBMRegressor):
+class LGBMRegressor(_LGBMModel, lightgbm.LGBMRegressor):
 
     def fit(self, X, y=None, sample_weight=None, client=None, **kwargs):
         if client is None:
             client = default_client()
+
         model_factory = lightgbm.LGBMRegressor
         params = self.get_params(True)
-
         model = train(client, X, y, params, model_factory, sample_weight, **kwargs)
+
         self.set_params(**model.get_params())
-        self._Booster = model._Booster
-        self._n_features = model._n_features
-        self._evals_result = model._evals_result
-        self._best_iteration = model._best_iteration
-        self._best_score = model._best_score
+        self._copy_extra_params(model, self)
 
         return self
     fit.__doc__ = lightgbm.LGBMRegressor.fit.__doc__
@@ -236,10 +230,5 @@ class LGBMRegressor(lightgbm.LGBMRegressor):
 
     def to_local(self):
         model = lightgbm.LGBMRegressor(**self.get_params())
-        model._Booster = self._Booster
-        model._n_features = self._n_features
-        model._evals_result = self._evals_result
-        model._best_iteration = self._best_iteration
-        model._best_score = self._best_score
-
+        self._copy_extra_params(self, model)
         return model
