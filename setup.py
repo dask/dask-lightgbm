@@ -8,7 +8,8 @@ install_requires = [
     'numpy>=1.17.3',
     'lightgbm>=2.3.0',
     'dask>=2.6.0',
-    'distributed>=2.6.0'
+    'distributed>=2.6.0',
+    'toolz>=0.10.0'
 ]
 
 extras_require = {
@@ -18,7 +19,8 @@ extras_require = {
         'dask[dataframe]',
         'dask-ml>=1.1.1',
         'requests>=2.22.0',
-        'fsspec>=0.5.2'
+        'fsspec>=0.5.2',
+        'scikit-learn>=0.21.3'
     ],
     'sparse': [
         'sparse==0.5.0',

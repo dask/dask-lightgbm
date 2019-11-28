@@ -32,7 +32,7 @@ def listen_port():
 listen_port.port = 13000
 
 
-def _create_data(objective, n_samples=100, centers=2, output="array", chunk_size=50):
+def _create_data(objective, n_samples=100, centers=2, output='array', chunk_size=50):
     if objective == 'classification':
         X, y = make_blobs(n_samples=n_samples, centers=centers, random_state=42)
     elif objective == 'regression':
@@ -42,21 +42,21 @@ def _create_data(objective, n_samples=100, centers=2, output="array", chunk_size
     rnd = np.random.RandomState(42)
     w = rnd.rand(X.shape[0])*0.01
 
-    if output == "array":
+    if output == 'array':
         dX = da.from_array(X, (chunk_size, X.shape[1]))
         dy = da.from_array(y, chunk_size)
         dw = da.from_array(w, chunk_size)
-    elif output == "dataframe":
-        X_df = pd.DataFrame(X, columns=[f"feature_{i}" for i in range(X.shape[1])])
-        y_df = pd.Series(y, name="target")
+    elif output == 'dataframe':
+        X_df = pd.DataFrame(X, columns=[f'feature_{i}' for i in range(X.shape[1])])
+        y_df = pd.Series(y, name='target')
         dX = dd.from_pandas(X_df, chunksize=chunk_size)
         dy = dd.from_pandas(y_df, chunksize=chunk_size)
         dw = dd.from_array(w, chunksize=chunk_size)
-    elif output == "scipy_csr_matrix":
+    elif output == 'scipy_csr_matrix':
         dX = da.from_array(X, chunks=(chunk_size, X.shape[1])).map_blocks(scipy.sparse.csr_matrix)
         dy = da.from_array(y, chunks=chunk_size)
         dw = da.from_array(w, chunk_size)
-    elif output == "sparse":
+    elif output == 'sparse':
         dX = da.from_array(X, chunks=(chunk_size, X.shape[1])).map_blocks(sparse.COO)
         dy = da.from_array(y, chunks=chunk_size)
         dw = da.from_array(w, chunk_size)
@@ -114,7 +114,7 @@ def test_classifier_proba(loop, output, listen_port, centers):
 def test_classifier_local_predict(loop, listen_port): #noqa
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop):
-            X, y, w, dX, dy, dw = _create_data('classification', output="array")
+            X, y, w, dX, dy, dw = _create_data('classification', output='array')
 
             a = dlgbm.LGBMClassifier(local_listen_port=listen_port)
             a = a.fit(dX, dy, sample_weight=dw)
@@ -181,7 +181,7 @@ def test_regressor_quantile(loop, output, listen_port, alpha):
 def test_regressor_local_predict(loop, listen_port):
     with cluster() as (s, [a, b]):
         with Client(s['address'], loop=loop):
-            X, y, w, dX, dy, dw = _create_data('regression', output="array")
+            X, y, w, dX, dy, dw = _create_data('regression', output='array')
 
             a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42)
             a = a.fit(dX, dy, sample_weight=dw)
@@ -199,17 +199,17 @@ def test_regressor_local_predict(loop, listen_port):
 
 def test_build_network_params():
     workers_ips = [
-        "tcp://192.168.0.1:34545",
-        "tcp://192.168.0.2:34346",
-        "tcp://192.168.0.3:34347"
+        'tcp://192.168.0.1:34545',
+        'tcp://192.168.0.2:34346',
+        'tcp://192.168.0.3:34347'
     ]
 
-    params = dlgbm.build_network_params(workers_ips, "tcp://192.168.0.2:34346", 12400, 120)
+    params = dlgbm.build_network_params(workers_ips, 'tcp://192.168.0.2:34346', 12400, 120)
     exp_params = {
-        "machines": "192.168.0.1:12400,192.168.0.2:12401,192.168.0.3:12402",
-        "local_listen_port": 12401,
-        "num_machines": len(workers_ips),
-        "time_out": 120
+        'machines': '192.168.0.1:12400,192.168.0.2:12401,192.168.0.3:12402',
+        'local_listen_port': 12401,
+        'num_machines': len(workers_ips),
+        'time_out': 120
     }
     assert exp_params == params
 
