@@ -130,10 +130,7 @@ def train(client, data, label, params, model_factory, weight=None, **kwargs):
 
 
 def _predict_part(part, model, proba, **kwargs):
-    if isinstance(part, pd.DataFrame):
-        data = part.values
-    else:
-        data = part
+    data = part.values if isinstance(part, pd.DataFrame) else part
 
     if data.shape[0] == 0:
         result = np.array([])
