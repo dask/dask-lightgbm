@@ -53,7 +53,9 @@ def concat(L):
         raise TypeError(f'Data must be either numpy arrays or pandas dataframes. Got {type(L[0])}.')
 
 
-def _train_part(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400, time_out=120, **kwargs):
+def _train_part(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400,
+                time_out=120, **kwargs):
+
     network_params = build_network_params(worker_addresses, get_worker().address, local_listen_port, time_out)
     params.update(network_params)
 
@@ -109,7 +111,8 @@ def train(client, data, label, params, model_factory, weight=None, **kwargs):
     worker_ncores = client.ncores()
 
     if 'tree_learner' not in params or params['tree_learner'].lower() not in {'data', 'feature', 'voting'}:
-        logger.warning(f'Parameter tree_learner not set or set to incorrect value ({params.get("tree_learner", None)}), using "data" as default')
+        logger.warning('Parameter tree_learner not set or set to incorrect value '
+                       f'({params.get("tree_learner", None)}), using "data" as default')
         params['tree_learner'] = 'data'
 
     # Tell each worker to train on the parts that it has locally
