@@ -50,7 +50,8 @@ def concat(L):
     elif sparse and isinstance(L[0], sparse.SparseArray):
         return sparse.concatenate(L, axis=0)
     else:
-        raise TypeError(f'Data must be either numpy arrays or pandas dataframes. Got {type(L[0])}.')
+        raise TypeError('Data must be one of: numpy arrays, pandas dataframes, sparse matrices '
+                        f'(from scipy or from sparse). Got {type(L[0])}.')
 
 
 def _train_part(params, model_factory, list_of_parts, worker_addresses, return_model, local_listen_port=12400,
