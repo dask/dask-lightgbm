@@ -10,8 +10,9 @@ Dask.Array and Dask.DataFrame collections. It is based on dask-xgboost package.
 
 Usage
 -----
-Load your data into distributed data-structure Dask.Array or Dask.DataFrame.
-Connect to a Dask cluster using and let dask-lightgbm train the model for you.
+Load your data into distributed data-structure, which can be either Dask.Array or Dask.DataFrame.
+Connect to a Dask cluster using Dask.distributed.Client.
+Let dask-lightgbm train a model or make predictions for you.
 See system tests for a sample code:
 <https://github.com/dask/dask-lightgbm/blob/master/system_tests/test_fit_predict.py>
 
