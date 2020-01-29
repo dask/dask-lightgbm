@@ -11,15 +11,6 @@ install_requires = [
 ]
 
 extras_require = {
-    'dev': [
-        'pytest>=5.2.2',
-        'pandas>=0.25.3',
-        'dask[dataframe]',
-        'dask-ml>=1.1.1',
-        'requests>=2.22.0',
-        'fsspec>=0.5.2',
-        'scikit-learn>=0.21.3'
-    ],
     'sparse': [
         'sparse==0.5.0',
         'scipy>=1.3.1'
