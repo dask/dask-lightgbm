@@ -1,5 +1,5 @@
 ARG version
-FROM python:${version}-stretch
+FROM python:${version}-buster
 
 RUN pip install pipenv
 COPY . /app
