@@ -63,7 +63,7 @@ def _create_data(objective, n_samples=100, centers=2, output='array', chunk_size
 
 @pytest.mark.parametrize('output', data_output)
 @pytest.mark.parametrize('centers', data_centers)
-def test_classifier(output, centers, client, listen_port):
+def test_classifier(output, centers, client, listen_port):  # noqa
     X, y, w, dX, dy, dw = _create_data('classification', output=output, centers=centers)
 
     a = dlgbm.LGBMClassifier(time_out=5, local_listen_port=listen_port)
@@ -89,7 +89,7 @@ def test_classifier(output, centers, client, listen_port):
 
 @pytest.mark.parametrize('output', data_output)
 @pytest.mark.parametrize('centers', data_centers)
-def test_classifier_proba(output, centers, client, listen_port):
+def test_classifier_proba(output, centers, client, listen_port):  # noqa
     X, y, w, dX, dy, dw = _create_data('classification', output=output, centers=centers)
 
     a = dlgbm.LGBMClassifier(time_out=5, local_listen_port=listen_port)
@@ -104,7 +104,7 @@ def test_classifier_proba(output, centers, client, listen_port):
     assert_eq(p1, p2, atol=0.3)
 
 
-def test_classifier_local_predict(client, listen_port):
+def test_classifier_local_predict(client, listen_port):  # noqa
     X, y, w, dX, dy, dw = _create_data('classification', output='array')
 
     a = dlgbm.LGBMClassifier(time_out=5, local_listen_port=listen_port)
@@ -121,7 +121,7 @@ def test_classifier_local_predict(client, listen_port):
 
 
 @pytest.mark.parametrize('output', data_output)
-def test_regressor(output, client, listen_port):
+def test_regressor(output, client, listen_port):  # noqa
     X, y, w, dX, dy, dw = _create_data('regression', output=output)
 
     a = dlgbm.LGBMRegressor(time_out=5, local_listen_port=listen_port, seed=42)
@@ -147,7 +147,7 @@ def test_regressor(output, client, listen_port):
 
 @pytest.mark.parametrize('output', data_output)
 @pytest.mark.parametrize('alpha', [.1, .5, .9])
-def test_regressor_quantile(output, client, listen_port, alpha):
+def test_regressor_quantile(output, client, listen_port, alpha):  # noqa
     X, y, w, dX, dy, dw = _create_data('regression', output=output)
 
     a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42, objective='quantile', alpha=alpha)
@@ -165,7 +165,7 @@ def test_regressor_quantile(output, client, listen_port, alpha):
     np.isclose(q2, alpha, atol=.1)
 
 
-def test_regressor_local_predict(client, listen_port):
+def test_regressor_local_predict(client, listen_port):  # noqa
     X, y, w, dX, dy, dw = _create_data('regression', output='array')
 
     a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42)
