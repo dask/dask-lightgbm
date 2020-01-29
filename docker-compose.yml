@@ -28,4 +28,6 @@ services:
       dockerfile: Dockerfile.test
     image: dask-lightgbm
     hostname: dask-client
-    command: ["pytest", "/app/system_tests"]
+    environment:
+      - SCHEDULER=tcp://scheduler:8786
+    command: ["pytest", "system_tests"]
