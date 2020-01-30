@@ -1,10 +1,5 @@
-# Workaround for conflict with distributed 1.23.0
-# https://github.com/dask/dask-xgboost/pull/27#issuecomment-417474734
-from concurrent.futures import ThreadPoolExecutor
-
 import dask.array as da
 import dask.dataframe as dd
-import distributed.comm.utils
 import lightgbm
 import numpy as np
 import pandas as pd
@@ -12,15 +7,17 @@ import pytest
 import scipy.sparse
 import sparse
 from dask.array.utils import assert_eq
-from dask.distributed import Client
 from dask_ml.metrics import accuracy_score, r2_score
-from distributed.utils_test import gen_cluster, loop, cluster  # noqa
+
+from distributed.utils_test import client, cluster_fixture, loop, gen_cluster  # noqa
 from sklearn.datasets import make_blobs, make_regression
 from sklearn.metrics import confusion_matrix
 
 import dask_lightgbm.core as dlgbm
 
-distributed.comm.utils._offload_executor = ThreadPoolExecutor(max_workers=2)
+
+data_output = ['array', 'scipy_csr_matrix', 'sparse', 'dataframe']
+data_centers = [[[-4, -4], [4, 4]], [[-4, -4], [4, 4], [-4, 4]]]
 
 
 @pytest.fixture()
@@ -64,137 +61,125 @@ def _create_data(objective, n_samples=100, centers=2, output='array', chunk_size
     return X, y, w, dX, dy, dw
 
 
-@pytest.mark.parametrize('output', ['array', 'scipy_csr_matrix', 'sparse', 'dataframe'])
-@pytest.mark.parametrize('centers', [[[-4, -4], [4, 4]], [[-4, -4], [4, 4], [-4, 4]]])  # noqa
-def test_classifier(loop, output, listen_port, centers):
-    with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop) as client:
-            X, y, w, dX, dy, dw = _create_data('classification', output=output, centers=centers)
+@pytest.mark.parametrize('output', data_output)
+@pytest.mark.parametrize('centers', data_centers)
+def test_classifier(output, centers, client, listen_port):  # noqa
+    X, y, w, dX, dy, dw = _create_data('classification', output=output, centers=centers)
 
-            a = dlgbm.LGBMClassifier(local_listen_port=listen_port)
-            a = a.fit(dX, dy, sample_weight=dw)
-            p1 = a.predict(dX, client=client)
-            s1 = accuracy_score(dy, p1)
-            p1 = p1.compute()
+    a = dlgbm.LGBMClassifier(time_out=5, local_listen_port=listen_port)
+    a = a.fit(dX, dy, sample_weight=dw, client=client)
+    p1 = a.predict(dX, client=client)
+    s1 = accuracy_score(dy, p1)
+    p1 = p1.compute()
 
-            b = lightgbm.LGBMClassifier()
-            b.fit(X, y, sample_weight=w)
-            p2 = b.predict(X)
-            s2 = b.score(X, y)
-            print(confusion_matrix(y, p1))
-            print(confusion_matrix(y, p2))
+    b = lightgbm.LGBMClassifier()
+    b.fit(X, y, sample_weight=w)
+    p2 = b.predict(X)
+    s2 = b.score(X, y)
+    print(confusion_matrix(y, p1))
+    print(confusion_matrix(y, p2))
 
-            assert_eq(s1, s2)
-            print(s1)
+    assert_eq(s1, s2)
+    print(s1)
 
-            assert_eq(p1, p2)
-            assert_eq(y, p1)
-            assert_eq(y, p2)
+    assert_eq(p1, p2)
+    assert_eq(y, p1)
+    assert_eq(y, p2)
 
 
-@pytest.mark.parametrize('output', ['array', 'scipy_csr_matrix', 'sparse', 'dataframe'])
-@pytest.mark.parametrize('centers', [[[-4, -4], [4, 4]], [[-4, -4], [4, 4], [-4, 4]]])  # noqa
-def test_classifier_proba(loop, output, listen_port, centers):
-    with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop) as client:
-            X, y, w, dX, dy, dw = _create_data('classification', output=output, centers=centers)
+@pytest.mark.parametrize('output', data_output)
+@pytest.mark.parametrize('centers', data_centers)
+def test_classifier_proba(output, centers, client, listen_port):  # noqa
+    X, y, w, dX, dy, dw = _create_data('classification', output=output, centers=centers)
 
-            a = dlgbm.LGBMClassifier(local_listen_port=listen_port)
-            a = a.fit(dX, dy, sample_weight=dw)
-            p1 = a.predict_proba(dX, client=client)
-            p1 = p1.compute()
+    a = dlgbm.LGBMClassifier(time_out=5, local_listen_port=listen_port)
+    a = a.fit(dX, dy, sample_weight=dw, client=client)
+    p1 = a.predict_proba(dX, client=client)
+    p1 = p1.compute()
 
-            b = lightgbm.LGBMClassifier()
-            b.fit(X, y, sample_weight=w)
-            p2 = b.predict_proba(X)
+    b = lightgbm.LGBMClassifier()
+    b.fit(X, y, sample_weight=w)
+    p2 = b.predict_proba(X)
 
-            assert_eq(p1, p2, atol=0.3)
+    assert_eq(p1, p2, atol=0.3)
 
 
-def test_classifier_local_predict(loop, listen_port): #noqa
-    with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop):
-            X, y, w, dX, dy, dw = _create_data('classification', output='array')
+def test_classifier_local_predict(client, listen_port):  # noqa
+    X, y, w, dX, dy, dw = _create_data('classification', output='array')
 
-            a = dlgbm.LGBMClassifier(local_listen_port=listen_port)
-            a = a.fit(dX, dy, sample_weight=dw)
-            p1 = a.to_local().predict(dX)
+    a = dlgbm.LGBMClassifier(time_out=5, local_listen_port=listen_port)
+    a = a.fit(dX, dy, sample_weight=dw, client=client)
+    p1 = a.to_local().predict(dX)
 
-            b = lightgbm.LGBMClassifier()
-            b.fit(X, y, sample_weight=w)
-            p2 = b.predict(X)
+    b = lightgbm.LGBMClassifier()
+    b.fit(X, y, sample_weight=w)
+    p2 = b.predict(X)
 
-            assert_eq(p1, p2)
-            assert_eq(y, p1)
-            assert_eq(y, p2)
+    assert_eq(p1, p2)
+    assert_eq(y, p1)
+    assert_eq(y, p2)
 
 
-@pytest.mark.parametrize('output', ['array', 'scipy_csr_matrix', 'sparse', 'dataframe'])
-def test_regressor(loop, output, listen_port):
-    with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop) as client:
-            X, y, w, dX, dy, dw = _create_data('regression', output=output)
+@pytest.mark.parametrize('output', data_output)
+def test_regressor(output, client, listen_port):  # noqa
+    X, y, w, dX, dy, dw = _create_data('regression', output=output)
 
-            a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42)
-            a = a.fit(dX, dy, client=client, sample_weight=dw)
-            p1 = a.predict(dX, client=client)
-            if output != 'dataframe':
-                s1 = r2_score(dy, p1)
-            p1 = p1.compute()
+    a = dlgbm.LGBMRegressor(time_out=5, local_listen_port=listen_port, seed=42)
+    a = a.fit(dX, dy, client=client, sample_weight=dw)
+    p1 = a.predict(dX, client=client)
+    if output != 'dataframe':
+        s1 = r2_score(dy, p1)
+    p1 = p1.compute()
 
-            b = lightgbm.LGBMRegressor(seed=42)
-            b.fit(X, y, sample_weight=w)
-            s2 = b.score(X, y)
-            p2 = b.predict(X)
+    b = lightgbm.LGBMRegressor(seed=42)
+    b.fit(X, y, sample_weight=w)
+    s2 = b.score(X, y)
+    p2 = b.predict(X)
 
-            # Scores should be the same
-            if output != 'dataframe':
-                assert_eq(s1, s2, atol=.01)
+    # Scores should be the same
+    if output != 'dataframe':
+        assert_eq(s1, s2, atol=.01)
 
-            # Predictions should be roughly the same
-            assert_eq(y, p1, rtol=1., atol=50.)
-            assert_eq(y, p2, rtol=1., atol=50.)
+    # Predictions should be roughly the same
+    assert_eq(y, p1, rtol=1., atol=50.)
+    assert_eq(y, p2, rtol=1., atol=50.)
 
 
-@pytest.mark.parametrize('output', ['array', 'scipy_csr_matrix', 'sparse', 'dataframe'])
+@pytest.mark.parametrize('output', data_output)
 @pytest.mark.parametrize('alpha', [.1, .5, .9])
-def test_regressor_quantile(loop, output, listen_port, alpha):
-    with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop) as client:
-            X, y, w, dX, dy, dw = _create_data('regression', output=output)
+def test_regressor_quantile(output, client, listen_port, alpha):  # noqa
+    X, y, w, dX, dy, dw = _create_data('regression', output=output)
 
-            a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42, objective='quantile', alpha=alpha)
-            a = a.fit(dX, dy, client=client, sample_weight=dw)
-            p1 = a.predict(dX, client=client).compute()
-            q1 = np.count_nonzero(y < p1) / y.shape[0]
+    a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42, objective='quantile', alpha=alpha)
+    a = a.fit(dX, dy, client=client, sample_weight=dw)
+    p1 = a.predict(dX, client=client).compute()
+    q1 = np.count_nonzero(y < p1) / y.shape[0]
 
-            b = lightgbm.LGBMRegressor(seed=42, objective='quantile', alpha=alpha)
-            b.fit(X, y, sample_weight=w)
-            p2 = b.predict(X)
-            q2 = np.count_nonzero(y < p2) / y.shape[0]
+    b = lightgbm.LGBMRegressor(seed=42, objective='quantile', alpha=alpha)
+    b.fit(X, y, sample_weight=w)
+    p2 = b.predict(X)
+    q2 = np.count_nonzero(y < p2) / y.shape[0]
 
-            # Quantiles should be right
-            np.isclose(q1, alpha, atol=.1)
-            np.isclose(q2, alpha, atol=.1)
+    # Quantiles should be right
+    np.isclose(q1, alpha, atol=.1)
+    np.isclose(q2, alpha, atol=.1)
 
 
-def test_regressor_local_predict(loop, listen_port):
-    with cluster() as (s, [a, b]):
-        with Client(s['address'], loop=loop):
-            X, y, w, dX, dy, dw = _create_data('regression', output='array')
+def test_regressor_local_predict(client, listen_port):  # noqa
+    X, y, w, dX, dy, dw = _create_data('regression', output='array')
 
-            a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42)
-            a = a.fit(dX, dy, sample_weight=dw)
-            p1 = a.predict(dX)
-            p2 = a.to_local().predict(X)
-            s1 = r2_score(dy, p1)
-            p1 = p1.compute()
-            s2 = a.to_local().score(X, y)
-            print(s1)
+    a = dlgbm.LGBMRegressor(local_listen_port=listen_port, seed=42)
+    a = a.fit(dX, dy, sample_weight=dw, client=client)
+    p1 = a.predict(dX)
+    p2 = a.to_local().predict(X)
+    s1 = r2_score(dy, p1)
+    p1 = p1.compute()
+    s2 = a.to_local().score(X, y)
+    print(s1)
 
-            # Predictions and scores should be the same
-            assert_eq(p1, p2)
-            np.isclose(s1, s2)
+    # Predictions and scores should be the same
+    assert_eq(p1, p2)
+    np.isclose(s1, s2)
 
 
 def test_build_network_params():

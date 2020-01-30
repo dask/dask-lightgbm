@@ -1,20 +1,22 @@
-sudo: required
 language: python
 services:
   - docker
-
 env:
   global:
-    # Docker
-    - DOCKER_REPOSITORY=dask-lightgbm
+    - DOCKER_TAG=${TRAVIS_COMMIT}
 
-before_install:
-  - docker --version
-  - echo "ENV GIT_SHA ${TRAVIS_COMMIT}" >> Dockerfile.test
+jobs:
+  include:
+  - python: "3.6"
+    env: PYTHON_VERSION="3.6"
+  - python: "3.7"
+    env: PYTHON_VERSION="3.7"
+  - python: "3.8"
+    env: PYTHON_VERSION="3.8"
 
 install:
-  - docker build -t ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} -f Dockerfile.test --pull=true .
+  - make build
 
 script:
-  - docker run ${DOCKER_REPOSITORY}:${TRAVIS_COMMIT} pytest /app/dask_lightgbm
-  - docker-compose up --abort-on-container-exit
+  - make unit-test
+  - make system-test

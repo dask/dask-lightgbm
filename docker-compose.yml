@@ -2,10 +2,7 @@ version: '3.1'
 
 services:
   scheduler:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    image: dask-lightgbm
+    image: "dask-lightgbm:${DOCKER_TAG}"
     hostname: dask-scheduler
     ports:
       - "8786:8786"
@@ -13,19 +10,15 @@ services:
     command: ["dask-scheduler"]
 
   worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    image: dask-lightgbm
+    image: "dask-lightgbm:${DOCKER_TAG}"
     hostname: dask-worker
     environment:
       - SCHEDULER=tcp://scheduler:8786
     command: ["dask-worker", "--nprocs", "2", "--nthreads", "2", "scheduler:8786"]
 
   client:
-    build:
-      context: .
-      dockerfile: Dockerfile.test
-    image: dask-lightgbm
+    image: "dask-lightgbm:${DOCKER_TAG}"
     hostname: dask-client
-    command: ["pytest", "/app/system_tests"]
+    environment:
+      - SCHEDULER=tcp://scheduler:8786
+    command: ["pytest", "system_tests"]

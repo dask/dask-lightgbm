@@ -1,1 +1,1 @@
-from .core import LGBMRegressor, LGBMClassifier
+from .core import LGBMRegressor, LGBMClassifier  # noqa

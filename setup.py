@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import io
-import os
 from setuptools import setup
 
 install_requires = [
@@ -13,27 +11,21 @@ install_requires = [
 ]
 
 extras_require = {
-    'dev': [
-        'pytest>=5.2.2',
-        'pandas>=0.25.3',
-        'dask[dataframe]',
-        'dask-ml>=1.1.1',
-        'requests>=2.22.0',
-        'fsspec>=0.5.2',
-        'scikit-learn>=0.21.3'
-    ],
     'sparse': [
         'sparse==0.5.0',
         'scipy>=1.3.1'
     ]
 }
 
+
+with open('README.md', mode='r', encoding='utf-8') as f:
+    readme = f.read()
+
+
 setup(name='dask-lightgbm',
       version='0.1.0',
       description='Interactions between Dask and LightGBM',
-      long_description=(io.open('README.md', encoding='utf-8').read()
-                        if os.path.exists('README.md')
-                        else ''),
+      long_description=readme,
       long_description_content_type='text/markdown',
       license='BSD',
       url='https://github.com/dask/dask-lightgbm',
