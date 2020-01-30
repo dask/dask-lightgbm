@@ -1,5 +1,5 @@
-ARG version
-FROM python:${version}-buster
+ARG VERSION
+FROM python:${VERSION}-buster
 
 RUN pip install pipenv
 COPY . /app
