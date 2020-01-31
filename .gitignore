@@ -1,3 +1,4 @@
+dist/
 .pytest_cache/
 .git/
 .idea/
