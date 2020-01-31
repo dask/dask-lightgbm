@@ -40,7 +40,7 @@ pylama = "^7.7.1"
 pandas = "^0.25.3"
 dask = {extras = ["array", "dataframe"], version = "^2.6.0"}
 dask-ml = "^1.2.0"
-scikit-learn = "^0.21.3"
+scikit-learn = "^0.22.1"
 
 [build-system]
 requires = ["poetry>=0.12"]

@@ -1,5 +1,5 @@
 DOCKER_TAG?=latest
-PYTHON_VERSION?=3.7
+PYTHON_VERSION?=3.8
 
 clean:
 	@rm -rf build dist *.egg-info
