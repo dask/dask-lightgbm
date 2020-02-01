@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dask-lightgbm"
-version = "0.1.0"
+version = "0.2.0.dev0"
 description = "LightGBM distributed training on Dask"
 authors = [
     "Jan Stiborek <honza.stiborek@gmail.com>"
