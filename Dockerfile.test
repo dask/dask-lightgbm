@@ -1,8 +1,9 @@
 ARG VERSION
 FROM python:${VERSION}-buster
 
-RUN pip install pipenv
+RUN pip install poetry
 COPY . /app
 WORKDIR /app
 
-RUN pipenv install --dev --system --deploy --clear
+ENV POETRY_VIRTUALENVS_CREATE=false
+RUN poetry install --no-interaction --extras "sparse"
