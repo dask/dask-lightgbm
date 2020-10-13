@@ -1,7 +1,7 @@
 ARG VERSION
 FROM python:${VERSION}-buster
 
-RUN pip install poetry
+RUN pip install poetry==1.0.10
 COPY . /app
 WORKDIR /app
 
