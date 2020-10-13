@@ -68,7 +68,7 @@ def _train_part(params, model_factory, list_of_parts, worker_addresses, return_m
 
     try:
         model = model_factory(**params)
-        model.fit(data, label, sample_weight=weight)
+        model.fit(data, label, sample_weight=weight, **kwargs)
     finally:
         _safe_call(_LIB.LGBM_NetworkFree())
 
