@@ -1,7 +1,7 @@
 Dask-LightGBM
 =============
 
-[![Build Status](https://travis-ci.org/dask/dask-lightgbm.svg?branch=master)](https://travis-ci.org/dask/dask-lightgbm)
+[![Build Status](https://github.com/dask/dask-lightgbm/workflows/CI/badge.svg)](https://github.com/dask/dask-lightgbm/actions?query=workflow%3ACI)
 
 Distributed training with LightGBM and Dask.distributed
 

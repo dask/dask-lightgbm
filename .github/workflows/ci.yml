@@ -1,0 +1,27 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.6", "3.7", "3.8"]
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: make build
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+
+      - name: Unit test
+        run: make unit-test
+
+      - name: System test
+        run: make system-test
