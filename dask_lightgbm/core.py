@@ -60,15 +60,30 @@ def _train_part(params, model_factory, list_of_parts, worker_addresses, return_m
     network_params = build_network_params(worker_addresses, get_worker().address, local_listen_port, time_out)
     params.update(network_params)
 
+    is_ranker = model_factory.__qualname__ == 'LGBMRanker'
+
     # Concatenate many parts into one
-    parts = tuple(zip(*list_of_parts))
-    data = concat(parts[0])
-    label = concat(parts[1])
-    weight = concat(parts[2]) if len(parts) == 3 else None
+    if is_ranker:
+        parts = tuple(zip(*list_of_parts))
+        data = concat(parts[0])
+        label = concat(parts[1])
+        group = concat(parts[-1])
+        weight = concat(parts[2]) if len(parts) == 4 else None
+
+    else:
+        parts = tuple(zip(*list_of_parts))
+        data = concat(parts[0])
+        label = concat(parts[1])
+        weight = concat(parts[2]) if len(parts) == 3 else None
 
     try:
         model = model_factory(**params)
-        model.fit(data, label, sample_weight=weight, **kwargs)
+
+        if is_ranker:
+            model.fit(data, y=label, sample_weight=weight, group=group)
+        else:
+            model.fit(data, y=label, sample_weight=weight)
+
     finally:
         _safe_call(_LIB.LGBM_NetworkFree())
 
@@ -83,15 +98,22 @@ def _split_to_parts(data, is_matrix):
     return parts
 
 
-def train(client, data, label, params, model_factory, weight=None, **kwargs):
+def train(client, data, label, params, model_factory, weight=None, group=None, **kwargs):
     # Split arrays/dataframes into parts. Arrange parts into tuples to enforce co-locality
     data_parts = _split_to_parts(data, is_matrix=True)
     label_parts = _split_to_parts(label, is_matrix=False)
-    if weight is None:
+    weight_parts = _split_to_parts(weight, is_matrix=False) if weight is not None else None
+    group_parts = _split_to_parts(group, is_matrix=False) if group is not None else None
+
+    # choose between four options of (weight, group) being (un)specified
+    if weight_parts is None and group_parts is None:
         parts = list(map(delayed, zip(data_parts, label_parts)))
-    else:
-        weight_parts = _split_to_parts(weight, is_matrix=False)
+    elif weight_parts is not None and group_parts is None:
         parts = list(map(delayed, zip(data_parts, label_parts, weight_parts)))
+    elif weight_parts is None and group_parts is not None:
+        parts = list(map(delayed, zip(data_parts, label_parts, group_parts)))
+    else:
+        parts = list(map(delayed, zip(data_parts, label_parts, weight_parts, group_parts)))
 
     # Start computation in the background
     parts = client.compute(parts)
@@ -234,5 +256,33 @@ class LGBMRegressor(_LGBMModel, lightgbm.LGBMRegressor):
 
     def to_local(self):
         model = lightgbm.LGBMRegressor(**self.get_params())
+        self._copy_extra_params(self, model)
+        return model
+
+
+class LGBMRanker(_LGBMModel, lightgbm.LGBMRanker):
+
+    def fit(self, X, y=None, group=None, sample_weight=None, client=None, **kwargs):
+        if client is None:
+            client = default_client()
+
+        model_factory = lightgbm.LGBMRanker
+        params = self.get_params(True)
+        model = train(client, X, y, params, model_factory, sample_weight, group, **kwargs)
+
+        self.set_params(**model.get_params())
+        self._copy_extra_params(model, self)
+
+        return self
+    fit.__doc__ = lightgbm.LGBMRanker.fit.__doc__
+
+    def predict(self, X, client=None, **kwargs):
+        if client is None:
+            client = default_client()
+        return predict(client, self.to_local(), X, **kwargs)
+    predict.__doc__ = lightgbm.LGBMRanker.predict.__doc__
+
+    def to_local(self):
+        model = lightgbm.LGBMRanker(**self.get_params())
         self._copy_extra_params(self, model)
         return model

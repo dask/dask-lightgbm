@@ -4,6 +4,7 @@ import lightgbm
 import numpy as np
 import pandas as pd
 import pytest
+from scipy.stats import pearsonr, spearmanr
 import scipy.sparse
 import sparse
 from dask.array.utils import assert_eq
@@ -12,6 +13,7 @@ from dask_ml.metrics import accuracy_score, r2_score
 from distributed.utils_test import client, cluster_fixture, loop, gen_cluster  # noqa
 from sklearn.datasets import make_blobs, make_regression
 from sklearn.metrics import confusion_matrix
+from sklearn.utils import check_random_state
 
 import dask_lightgbm.core as dlgbm
 
@@ -27,6 +29,75 @@ def listen_port():
 
 
 listen_port.port = 13000
+
+
+def _make_ranking(n_samples=100, n_features=20, avg_gs=10, gmax=4, random_state=0):
+    """Generate a mock learning-to-rank dataset - feature vectors grouped together with
+    integer-valued graded relevance scores."""
+    rnd_generator = check_random_state(random_state)
+
+    y_vec, group_vec = np.empty((0,), dtype=int), np.empty((0,), dtype=int)
+    group = 0
+
+    # build target, group ID vectors.
+    while len(y_vec) < n_samples:
+        gsize = rnd_generator.poisson(avg_gs)
+        if not gsize:
+            continue
+
+        rel = rnd_generator.choice(range(gmax + 1), size=gsize, replace=True)
+        y_vec = np.append(y_vec, rel)
+        group_vec = np.append(group_vec, [group] * gsize)
+        group += 1
+
+    y_vec, group_vec = y_vec[0:n_samples], group_vec[0:n_samples]
+
+    # build feature data, X. Transform first few into informative features.
+    n_informative = int(np.ceil(n_features * 0.25))
+    x_grid = np.linspace(0, stop=1, num=gmax + 2)
+    X = np.random.uniform(size=(n_samples, n_features))
+
+    # make first n_informative features values bucketed according to relevance scores.
+    def bucket_fn(z):
+        return np.random.uniform(x_grid[z], high=x_grid[z + 1])
+
+    for j in range(n_informative):
+        X[:, j] = np.apply_along_axis(bucket_fn, axis=0, arr=y_vec)
+
+    return X, y_vec, group_vec
+
+
+def _create_ranking_data(n_samples=100, output='dataframe', chunk_size=10):
+    X, y, g = _make_ranking(n_samples=n_samples, random_state=42)
+    rnd = np.random.RandomState(42)
+    w = rnd.rand(X.shape[0]) * 0.01
+
+    if output != 'dataframe':
+        raise ValueError('ranking objective only supported for output = "dataframe" (dask.dataframe.core.DataFrames)')
+
+    # add target, weight, and group to DataFrame so that partitions abide by group boundaries.
+    X_df = pd.DataFrame(X, columns=[f'feature_{i}' for i in range(X.shape[1])])
+    X_df['y'] = y
+    X_df['g'] = g
+    X_df['w'] = w
+
+    # set_index ensures partitions are based on group id. See https://bit.ly/3pAWyNw.
+    X_df.set_index('g', inplace=True)
+    dX = dd.from_pandas(X_df, chunksize=chunk_size)
+
+    # separate target, weight from features.
+    dy = dX['y']
+    dw = dX['w']
+    dX = dX.drop(columns=['y', 'w'])
+    dg = dX.index.to_series()
+
+    # encode group identifiers into run-length encoding, the format LightGBMRanker is expecting
+    # so that within each partition, sum(g) = n_samples.
+    dg = dg.map_partitions(lambda p: p.groupby('g', sort=False).apply(lambda z: z.shape[0]))
+    gid_vec, gid_rle = np.unique(g, return_counts=True)
+    g = gid_rle[np.argsort(gid_vec)]
+
+    return X, y, w, g, dX, dy, dw, dg
 
 
 def _create_data(objective, n_samples=100, centers=2, output='array', chunk_size=50):
@@ -180,6 +251,38 @@ def test_regressor_local_predict(client, listen_port):  # noqa
     # Predictions and scores should be the same
     assert_eq(p1, p2)
     np.isclose(s1, s2)
+
+
+def test_ranker(client, listen_port):  # noqa
+    X, y, w, g, dX, dy, dw, dg = _create_ranking_data(output='dataframe')
+
+    a = dlgbm.LGBMRanker(time_out=5, local_listen_port=listen_port, seed=42)
+    a = a.fit(dX, dy, sample_weight=dw, group=dg, client=client)
+    rnk1 = a.predict(dX, client=client)
+    rnk1 = rnk1.compute()
+
+    b = lightgbm.LGBMRanker(seed=42)
+    b.fit(X, y, sample_weight=w, group=g)
+    rnk2 = b.predict(X)
+
+    # distributed ranker should do a pretty good job of ranking
+    assert spearmanr(rnk1, y).correlation > 0.95
+
+    # distributed scores should give virtually same ranking as local model.
+    assert pearsonr(rnk1, rnk2)[0] > 0.98
+
+
+def test_ranker_local_predict(client, listen_port):  # noqa
+    X, y, w, g, dX, dy, dw, dg = _create_ranking_data(output='dataframe')
+
+    a = dlgbm.LGBMRanker(local_listen_port=listen_port, seed=42)
+    a = a.fit(dX, dy, group=dg, client=client)
+    rnk1 = a.predict(dX)
+    rnk1 = rnk1.compute()
+    rnk2 = a.to_local().predict(X)
+
+    # distributed and local scores should be the same.
+    assert_eq(rnk1, rnk2)
 
 
 def test_build_network_params():
