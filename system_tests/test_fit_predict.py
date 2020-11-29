@@ -3,6 +3,7 @@ import os
 import dask.dataframe as dd
 import pytest
 from dask.distributed import Client
+from numpy import sqrt
 
 import dask_lightgbm.core as dlgbm
 
@@ -65,6 +66,7 @@ def test_ranking_newsread(client, listen_port):
     # group every ~11ish rows for ranking.
     dg = data.index.to_series().mod(50000)
     data = data.set_index(dg, sorted=False)
+    data = client.persist(data)
 
     dX = data.iloc[:, :-1]
     dy = data.iloc[:, -1].mod(4)
@@ -76,7 +78,13 @@ def test_ranking_newsread(client, listen_port):
 
     dy_pred = d_rnk.predict(dX, client=client)
 
-    spr = dd.concat([dy, dy_pred], axis=1).corr(method='spearman').compute().iloc[0, 1]
-    print(spr)
+    # predicted scores are returned in a dask.array, difficult to col-concat
+    # with dy, so determine (label, score) correlation by hand.
+    mu_y, mu_pred = dy.mean(), dy_pred.mean()
+    numerator = ((dy - mu_y) * (dy_pred - mu_pred)).sum()
+    d1 = ((dy - mu_y) ** 2).sum()
+    d2 = ((dy_pred - mu_pred) ** 2).sum().compute()
+    r = (numerator / sqrt(d1 * d2)).compute()
+    print(r)
 
-    assert spr > 0.8
+    assert r > 0.7
