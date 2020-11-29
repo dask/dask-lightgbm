@@ -14,7 +14,7 @@ services:
     hostname: dask-worker
     environment:
       - SCHEDULER=tcp://scheduler:8786
-    command: ["dask-worker", "--nprocs", "2", "--nthreads", "2", "scheduler:8786"]
+    command: ["dask-worker", "--nprocs", "2", "--nthreads", "2", "--memory-limit", "1e9", "scheduler:8786"]
 
   client:
     image: "dask-lightgbm:${DOCKER_TAG}"

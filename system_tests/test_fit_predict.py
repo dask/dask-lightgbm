@@ -57,3 +57,26 @@ def test_regress_newsread(client, listen_port):
     print(r2_score)
 
     assert r2_score > 0.8
+
+
+def test_ranking_newsread(client, listen_port):
+    data = dd.read_csv('./system_tests/data/*.gz', compression='gzip', blocksize=None)
+
+    # group every ~11ish rows for ranking.
+    dg = data.index.to_series().mod(50000)
+    data = data.set_index(dg, sorted=False)
+
+    dX = data.iloc[:, :-1]
+    dy = data.iloc[:, -1].mod(4)
+    dg = data.index.to_series()
+    dg = dg.map_partitions(lambda p: p.groupby(p, sort=False).apply(lambda z: z.shape[0]))
+
+    d_rnk = dlgbm.LGBMRanker(n_estimators=50, local_listen_port=listen_port)
+    d_rnk.fit(dX, dy, dg)
+
+    dy_pred = d_rnk.predict(dX, client=client)
+
+    spr = dd.concat([dy, dy_pred], axis=1).corr(method='spearman').compute().iloc[0, 1]
+    print(spr)
+
+    assert spr > 0.8
