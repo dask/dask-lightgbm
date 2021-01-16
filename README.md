@@ -1,5 +1,10 @@
-Dask-LightGBM
-=============
+Dask-LightGBM - DEPRECATED
+==========================
+
+THIS REPOSITORY IS DEPRECATED
+-----------------------------
+
+This repository is deprecated and it is no longer maintained. The code was migrated into LightGBM package - https://github.com/microsoft/LightGBM.
 
 [![Build Status](https://github.com/dask/dask-lightgbm/workflows/CI/badge.svg)](https://github.com/dask/dask-lightgbm/actions?query=workflow%3ACI)
 
