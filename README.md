@@ -19,7 +19,7 @@ Load your data into distributed data-structure, which can be either Dask.Array o
 Connect to a Dask cluster using Dask.distributed.Client.
 Let dask-lightgbm train a model or make predictions for you.
 See system tests for a sample code:
-<https://github.com/dask/dask-lightgbm/blob/master/system_tests/test_fit_predict.py>
+<https://github.com/dask/dask-lightgbm/blob/main/system_tests/test_fit_predict.py>
 
 How this works
 --------------
@@ -28,4 +28,4 @@ The library assures that both features and a label for each sample are located o
 It also lets each worker to know addresses and available ports of all other workers.
 The distributed training is performed by LightGBM library itself using sockets.
 See more details on distributed training in LightGBM here:
-<https://github.com/microsoft/LightGBM/blob/master/docs/Parallel-Learning-Guide.rst>
+<https://github.com/microsoft/LightGBM/blob/main/docs/Parallel-Learning-Guide.rst>
