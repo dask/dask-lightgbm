@@ -7,6 +7,7 @@ import dask.dataframe as dd
 import lightgbm
 import numpy as np
 import pandas as pd
+import warnings
 from dask import delayed
 from dask.distributed import wait, default_client, get_worker
 from lightgbm.basic import _safe_call, _LIB
@@ -22,6 +23,13 @@ except ImportError:
     ss = False
 
 logger = logging.getLogger(__name__)
+
+msg = (
+    "You are using the final release of dask-lightgbm. "
+    "dask-lightgbm functionality has been merged into lightgbm. "
+    "Consider switching to lightgbm."
+)
+warnings.warn(msg)
 
 
 def parse_host_port(address):
